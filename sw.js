@@ -1,6 +1,6 @@
 // sw.js — Monitor Insure
 // อัปเดตเลขเวอร์ชันนี้ทุกครั้งที่ deploy เพื่อบังคับให้ผู้ใช้ได้ไฟล์ใหม่
-const CACHE_VERSION = 'monitor-insure-v1';
+const CACHE_VERSION = 'monitor-insure-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
