@@ -1,0 +1,32 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Bump service worker cache version
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          sed -i "s/const CACHE_VERSION = '.*';/const CACHE_VERSION = 'monitor-insure-${SHORT_SHA}';/" sw.js
+          echo "CACHE_VERSION set to monitor-insure-${SHORT_SHA}"
+          grep CACHE_VERSION sw.js
+
+      - name: Deploy to Firebase Hosting
+        run: firebase deploy --only hosting --project insuresys-839eb --token "$FIREBASE_TOKEN"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
