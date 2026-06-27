@@ -28,6 +28,7 @@ jobs:
           sed -i "s/const CACHE_VERSION = '.*';/const CACHE_VERSION = 'monitor-insure-${SHORT_SHA}';/" sw.js
           echo "CACHE_VERSION set to monitor-insure-${SHORT_SHA}"
           grep CACHE_VERSION sw.js
+          cat sw.js | head -20
 
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project insuresys-839eb --token "$FIREBASE_TOKEN"
