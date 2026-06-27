@@ -1,22 +1,24 @@
-
 {
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "CLAUDE.md",
-      "**/*.exe",
-      "**/*.bat",
-      "**/*.txt",
-      "**/*.dll"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+    "hosting": {
+        "site": "monitor-insure",
+        "public": ".",
+        "ignore": [
+            "firebase.json",
+            "firestore.indexes.json",
+            "firestore.rules",
+            "**/node_modules/**",
+            "CLAUDE.md",
+            "**/*.exe",
+            "**/*.bat",
+            "**/*.txt",
+            "**/*.dll",
+            ".github"
+        ],
+        "rewrites": [
+            {
+                "source": "**",
+                "destination": "/index.html"
+            }
+        ]
+    }
 }
