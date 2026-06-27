@@ -1,12 +1,12 @@
 // sw.js — Monitor Insure
 // อัปเดตเลขเวอร์ชันนี้ทุกครั้งที่ deploy เพื่อบังคับให้ผู้ใช้ได้ไฟล์ใหม่
-const CACHE_VERSION = 'monitor-insure-v2';
+const CACHE_VERSION = 'monitor-insure-20260628';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icons/icon-192.png',
-  '/icons/icon-512.png' 
+  '/icons/icon-512.png'
 ];
 
 self.addEventListener('install', function(event) {
