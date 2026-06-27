@@ -64,7 +64,7 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
 #ov-form{z-index:1000}
 #ov-settings{z-index:1000}
 #ov-loading{z-index:500;background:rgba(255,255,255,.88);flex-direction:column;gap:10px;font-size:13px;color:#475569}
-.modal{background:#fff;border-radius:11px;padding:.85rem;max-height:97vh;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal{background:#fff;border-radius:11px;padding:.85rem;max-height:97vh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal-sm{width:min(380px,100%)}
 .modal-md{width:min(680px,100%)}
 .modal-lg{width:min(800px,100%)}
