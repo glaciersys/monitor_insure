@@ -31,6 +31,6 @@ jobs:
           cat sw.js | head -20
 
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting --project insuresys-839eb --token "$FIREBASE_TOKEN" --force
+        run: firebase deploy --only hosting --project insuresys-839eb 
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
