@@ -31,9 +31,24 @@ jobs:
           grep CACHE_VERSION sw.js
 
       - name: Deploy to Firebase Hosting
+        id: deploy
+        continue-on-error: true
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
           projectId: insuresys-839eb
           channelId: live
+
+      - name: Verify live site matches this commit
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          sleep 5
+          LIVE=$(curl -s "https://insuresys-839eb.web.app/sw.js?cachebust=$(date +%s)")
+          if echo "$LIVE" | grep -q "monitor-insure-${SHORT_SHA}"; then
+            echo "✅ เว็บไซต์ใช้เวอร์ชัน monitor-insure-${SHORT_SHA} แล้ว — deploy สำเร็จจริง (แม้ step ก่อนหน้าอาจรายงาน error เรื่อง version ซ้ำ ก็ไม่ใช่ปัญหา)"
+            exit 0
+          else
+            echo "❌ เว็บไซต์ยังไม่มีเวอร์ชัน monitor-insure-${SHORT_SHA} — deploy ล้มเหลวจริง ต้องตรวจสอบเพิ่ม"
+            exit 1
+          fi
