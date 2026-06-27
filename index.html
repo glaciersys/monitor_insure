@@ -163,16 +163,16 @@
       <div class="modal-title" id="form-title">เพิ่มลูกค้าใหม่</div>
       <button class="btn-close" onclick="closeForm()">✕</button>
     </div>
-    <!-- 3 คอลัมน์ compact ไม่ scroll -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;min-width:0;overflow:hidden">
+    <!-- layout: row-by-row, แต่ละแถวจัด flex เองเพื่อควบคุมความกว้างได้แม่นยำ -->
+    <div style="display:flex;flex-direction:column;gap:5px">
 
-      <!-- แถว 1: ชื่อ-นามสกุล (full width) -->
-      <div class="form-group" style="grid-column:1/-1">
+      <!-- แถว 1: ชื่อ-นามสกุล -->
+      <div class="form-group">
         <label>ชื่อ-นามสกุล <span class="req">*</span></label>
-        <div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:4px">
-          <select id="fpx" onchange="setDirty()"></select>
-          <input type="text" id="ffn" placeholder="ชื่อ" autocomplete="new-password" oninput="setDirty()">
-          <input type="text" id="fln" placeholder="นามสกุล" autocomplete="new-password" oninput="setDirty()">
+        <div style="display:flex;gap:4px;align-items:flex-start">
+          <select id="fpx" onchange="setDirty()" style="width:90px;flex-shrink:0"></select>
+          <input type="text" id="ffn" placeholder="ชื่อ" autocomplete="new-password" oninput="setDirty()" style="width:160px;flex-shrink:0">
+          <input type="text" id="fln" placeholder="นามสกุล" autocomplete="new-password" oninput="setDirty()" style="width:160px;flex-shrink:0">
         </div>
         <div class="inline-add" id="ipx" style="display:none">
           <input type="text" id="ipx-v" placeholder="เช่น พล.ต.">
@@ -182,77 +182,87 @@
         <div class="add-btn-row"><button class="btn btn-secondary btn-sm" id="ipx-btn" onclick="inShow('px')">+ เพิ่มคำนำหน้า</button></div>
       </div>
 
-      <!-- แถว 2: ที่อยู่ (full) + เบอร์โทร -->
-      <div class="form-group" style="grid-column:1/3">
-        <label>ที่อยู่</label>
-        <input type="text" id="fad" oninput="setDirty()" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด">
-      </div>
-      <div class="form-group" style="grid-column:3">
-        <label>เบอร์โทร <span class="req">*</span></label>
-        <input type="text" id="fph" placeholder="081-234-5678" autocomplete="new-password" oninput="setDirty()">
+      <!-- แถว 2: ที่อยู่ + เบอร์โทร -->
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1">
+          <label>ที่อยู่</label>
+          <input type="text" id="fad" oninput="setDirty()" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด">
+        </div>
+        <div class="form-group" style="width:160px;flex-shrink:0">
+          <label>เบอร์โทร <span class="req">*</span></label>
+          <input type="text" id="fph" placeholder="081-234-5678" autocomplete="new-password" oninput="setDirty()">
+        </div>
       </div>
 
       <!-- แถว 3: บริษัทประกัน + ประเภทประกัน -->
-      <div class="form-group" style="grid-column:1/3">
-        <label style="display:flex;align-items:center;justify-content:space-between">บริษัทประกันภัย<button class="btn btn-secondary btn-sm" id="ico-btn" onclick="inShow('co')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มบริษัทใหม่</button></label>
-        <div class="ss-wrap"><input type="text" class="ss-input" id="fco-input" placeholder="-- เลือกบริษัท --" readonly onclick="ssOpen('fco')" onkeydown="ssKey(event,'fco')" autocomplete="off"><input type="hidden" id="fco"><div class="ss-dropdown" id="fco-dd"><input class="ss-search" id="fco-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fco')" onkeydown="ssKey(event,'fco')"><div class="ss-list" id="fco-list"></div></div></div>
-        <div class="inline-add" id="ico" style="display:none"><input type="text" id="ico-v" placeholder="ชื่อบริษัท"><button class="btn btn-success btn-sm" onclick="inAdd('co')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('co')">ยกเลิก</button></div>
-      </div>
-      <div class="form-group" style="grid-column:3">
-        <label style="display:flex;align-items:center;justify-content:space-between">ประเภทประกัน <span class="req">*</span><button class="btn btn-secondary btn-sm" id="itype-btn" onclick="inShow('type')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มใหม่</button></label>
-        <div class="ss-wrap"><input type="text" class="ss-input" id="fty-input" placeholder="-- เลือกประเภท --" readonly onclick="ssOpen('fty')" onkeydown="ssKey(event,'fty')" autocomplete="off"><input type="hidden" id="fty"><div class="ss-dropdown" id="fty-dd"><input class="ss-search" id="fty-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fty')" onkeydown="ssKey(event,'fty')"><div class="ss-list" id="fty-list"></div></div></div>
-        <div class="inline-add" id="itype" style="display:none"><input type="text" id="itype-v" placeholder="ชั้น 2+"><button class="btn btn-success btn-sm" onclick="inAdd('type')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('type')">ยกเลิก</button></div>
-      </div>
-
-      <!-- แถว 4: วันที่ -->
-      <div class="form-group" style="grid-column:1">
-        <label>เริ่มต้นวันที่ <span class="req">*</span></label>
-        <input type="text" id="fsd" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="onStartDate();setDirty()">
-        <div class="year-disp" id="fsd-d"></div>
-      </div>
-      <div class="form-group" style="grid-column:2">
-        <label>สิ้นสุดวันที่ <span class="req">*</span></label>
-        <input type="text" id="fed" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="showYD('fed','fed-d');autoCalcStatus();setDirty()">
-        <div class="year-disp" id="fed-d"></div>
-      </div>
-      <div class="form-group" style="grid-column:3">
-        <label>สถานะ</label>
-        <div id="fst-display" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:12px;min-height:28px;display:flex;align-items:center"></div>
-        <input type="hidden" id="fst" value="active">
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1">
+          <label style="display:flex;align-items:center;justify-content:space-between">บริษัทประกันภัย<button class="btn btn-secondary btn-sm" id="ico-btn" onclick="inShow('co')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มบริษัทใหม่</button></label>
+          <div class="ss-wrap"><input type="text" class="ss-input" id="fco-input" placeholder="-- เลือกบริษัท --" readonly onclick="ssOpen('fco')" onkeydown="ssKey(event,'fco')" autocomplete="off"><input type="hidden" id="fco"><div class="ss-dropdown" id="fco-dd"><input class="ss-search" id="fco-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fco')" onkeydown="ssKey(event,'fco')"><div class="ss-list" id="fco-list"></div></div></div>
+          <div class="inline-add" id="ico" style="display:none"><input type="text" id="ico-v" placeholder="ชื่อบริษัท"><button class="btn btn-success btn-sm" onclick="inAdd('co')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('co')">ยกเลิก</button></div>
+        </div>
+        <div class="form-group" style="width:160px;flex-shrink:0">
+          <label style="display:flex;align-items:center;justify-content:space-between">ประเภท <span class="req">*</span><button class="btn btn-secondary btn-sm" id="itype-btn" onclick="inShow('type')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่ม</button></label>
+          <div class="ss-wrap"><input type="text" class="ss-input" id="fty-input" placeholder="-- ประเภท --" readonly onclick="ssOpen('fty')" onkeydown="ssKey(event,'fty')" autocomplete="off"><input type="hidden" id="fty"><div class="ss-dropdown" id="fty-dd"><input class="ss-search" id="fty-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fty')" onkeydown="ssKey(event,'fty')"><div class="ss-list" id="fty-list"></div></div></div>
+          <div class="inline-add" id="itype" style="display:none"><input type="text" id="itype-v" placeholder="ชั้น 2+"><button class="btn btn-success btn-sm" onclick="inAdd('type')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('type')">ยกเลิก</button></div>
+        </div>
       </div>
 
-      <!-- แถว 5: ยี่ห้อ รุ่น ทะเบียน -->
-      <div class="form-group" style="grid-column:1">
-        <label style="display:flex;align-items:center;justify-content:space-between">ยี่ห้อรถ<button class="btn btn-secondary btn-sm" id="ibr-btn" onclick="inShow('br')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มยี่ห้อใหม่</button></label>
-        <div class="ss-wrap"><input type="text" class="ss-input" id="fbr-input" placeholder="-- เลือกยี่ห้อ --" readonly onclick="ssOpen('fbr')" onkeydown="ssKey(event,'fbr')" autocomplete="off"><input type="hidden" id="fbr"><div class="ss-dropdown" id="fbr-dd"><input class="ss-search" id="fbr-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fbr')" onkeydown="ssKey(event,'fbr')"><div class="ss-list" id="fbr-list"></div></div></div>
-        <div class="inline-add" id="ibr" style="display:none"><input type="text" id="ibr-v" placeholder="ยี่ห้อใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('br')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('br')">ยกเลิก</button></div>
-      </div>
-      <div class="form-group" style="grid-column:2">
-        <label style="display:flex;align-items:center;justify-content:space-between">รุ่นรถ<button class="btn btn-secondary btn-sm" id="imo-btn" style="display:none;font-size:10px;padding:1px 6px;font-weight:400" onclick="inShow('mo')">+ เพิ่มรุ่นใหม่</button></label>
-        <div class="ss-wrap"><input type="text" class="ss-input" id="fmo-input" placeholder="-- เลือกรุ่น --" readonly onclick="ssOpen('fmo')" onkeydown="ssKey(event,'fmo')" autocomplete="off"><input type="hidden" id="fmo"><div class="ss-dropdown" id="fmo-dd"><input class="ss-search" id="fmo-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fmo')" onkeydown="ssKey(event,'fmo')"><div class="ss-list" id="fmo-list"></div></div></div>
-        <div class="inline-add" id="imo" style="display:none"><input type="text" id="imo-v" placeholder="รุ่นใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('mo')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('mo')">ยกเลิก</button></div>
-      </div>
-      <div class="form-group" style="grid-column:3">
-        <label>ทะเบียนรถ <span class="req">*</span></label>
-        <input type="text" id="fpl" autocomplete="new-password" placeholder="กข 1234 กรุงเทพ" oninput="setDirty()">
+      <!-- แถว 4: วันเริ่ม + วันสิ้นสุด + สถานะ -->
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="width:145px;flex-shrink:0">
+          <label>เริ่มต้นวันที่ <span class="req">*</span></label>
+          <input type="text" id="fsd" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="onStartDate();setDirty()">
+          <div class="year-disp" id="fsd-d"></div>
+        </div>
+        <div class="form-group" style="width:145px;flex-shrink:0">
+          <label>สิ้นสุดวันที่ <span class="req">*</span></label>
+          <input type="text" id="fed" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="showYD('fed','fed-d');autoCalcStatus();setDirty()">
+          <div class="year-disp" id="fed-d"></div>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>สถานะ</label>
+          <div id="fst-display" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:12px;min-height:28px;display:flex;align-items:center"></div>
+          <input type="hidden" id="fst" value="active">
+        </div>
       </div>
 
-      <!-- แถว 6: ปีรถ ทุนประกัน เบี้ยประกัน -->
-      <div class="form-group" style="grid-column:1">
-        <label>ปีรถ (ค.ศ.)</label>
-        <input type="number" id="fyr" placeholder="ปี ค.ศ." autocomplete="new-password" oninput="setDirty()" min="1900" max="2100">
+      <!-- แถว 5: ยี่ห้อ + รุ่น + ทะเบียน -->
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1">
+          <label style="display:flex;align-items:center;justify-content:space-between">ยี่ห้อรถ<button class="btn btn-secondary btn-sm" id="ibr-btn" onclick="inShow('br')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่ม</button></label>
+          <div class="ss-wrap"><input type="text" class="ss-input" id="fbr-input" placeholder="-- ยี่ห้อ --" readonly onclick="ssOpen('fbr')" onkeydown="ssKey(event,'fbr')" autocomplete="off"><input type="hidden" id="fbr"><div class="ss-dropdown" id="fbr-dd"><input class="ss-search" id="fbr-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fbr')" onkeydown="ssKey(event,'fbr')"><div class="ss-list" id="fbr-list"></div></div></div>
+          <div class="inline-add" id="ibr" style="display:none"><input type="text" id="ibr-v" placeholder="ยี่ห้อใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('br')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('br')">ยกเลิก</button></div>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label style="display:flex;align-items:center;justify-content:space-between">รุ่นรถ<button class="btn btn-secondary btn-sm" id="imo-btn" style="display:none;font-size:10px;padding:1px 6px;font-weight:400" onclick="inShow('mo')">+ เพิ่ม</button></label>
+          <div class="ss-wrap"><input type="text" class="ss-input" id="fmo-input" placeholder="-- รุ่น --" readonly onclick="ssOpen('fmo')" onkeydown="ssKey(event,'fmo')" autocomplete="off"><input type="hidden" id="fmo"><div class="ss-dropdown" id="fmo-dd"><input class="ss-search" id="fmo-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fmo')" onkeydown="ssKey(event,'fmo')"><div class="ss-list" id="fmo-list"></div></div></div>
+          <div class="inline-add" id="imo" style="display:none"><input type="text" id="imo-v" placeholder="รุ่นใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('mo')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('mo')">ยกเลิก</button></div>
+        </div>
+        <div class="form-group" style="width:150px;flex-shrink:0">
+          <label>ทะเบียนรถ <span class="req">*</span></label>
+          <input type="text" id="fpl" autocomplete="new-password" placeholder="กข 1234" oninput="setDirty()">
+        </div>
       </div>
-      <div class="form-group" style="grid-column:2">
-        <label>ทุนประกันภัย (บาท)</label>
-        <input type="text" id="fcv" placeholder="จำนวนเงิน" autocomplete="new-password" oninput="numFmt(this);setDirty()" inputmode="numeric">
-      </div>
-      <div class="form-group" style="grid-column:3">
-        <label>เบี้ยประกัน (บาท/ปี) <span class="req">*</span></label>
-        <input type="text" id="fpr" placeholder="จำนวนเงิน" autocomplete="new-password" oninput="numFmt(this);setDirty()" inputmode="numeric">
+
+      <!-- แถว 6: ปีรถ + ทุนประกัน + เบี้ยประกัน -->
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="width:100px;flex-shrink:0">
+          <label>ปีรถ (ค.ศ.)</label>
+          <input type="number" id="fyr" placeholder="ปี ค.ศ." autocomplete="new-password" oninput="setDirty()" min="1900" max="2100">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>ทุนประกันภัย (บาท)</label>
+          <input type="text" id="fcv" placeholder="0.00" autocomplete="new-password" oninput="numFmt(this);setDirty()" inputmode="numeric">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>เบี้ยประกัน (บาท/ปี) <span class="req">*</span></label>
+          <input type="text" id="fpr" placeholder="0.00" autocomplete="new-password" oninput="numFmt(this);setDirty()" inputmode="numeric">
+        </div>
       </div>
 
       <!-- แถว 7: หมายเหตุ -->
-      <div class="form-group" style="grid-column:1/-1">
+      <div class="form-group">
         <label>หมายเหตุ</label>
         <input type="text" id="fno" placeholder="หมายเหตุ" oninput="setDirty()">
       </div>
