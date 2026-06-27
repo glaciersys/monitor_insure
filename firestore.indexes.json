@@ -1,0 +1,20 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "custId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "customers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

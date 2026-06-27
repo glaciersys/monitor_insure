@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+<title>monitor insure</title>
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a4f8a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Monitor Insure">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+<!-- Firebase SDK -->
+  <!-- Firebase SDK (compat — ใช้กับ Apps Script HtmlService ได้) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body tabindex="-1">
+
+<div id="update-banner">
+  <span>🔄 มีเวอร์ชันใหม่ของแอปพร้อมใช้งาน</span>
+  <button onclick="applyAppUpdate()">อัปเดตเลย</button>
+</div>
+
+<!-- MAIN MENU -->
+<div id="main-menu" class="hidden">
+  <div class="mm-header">
+    <div class="mm-logo"><svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 64 64"><rect x="4" y="24" width="56" height="22" rx="5" fill="#5ba3e8"/><polygon points="10,24 15,10 49,10 54,24" fill="#7bbcf0"/><rect x="4" y="36" width="56" height="10" rx="3" fill="#3a7abf"/><circle cx="16" cy="48" r="7" fill="#1a1a2e"/><circle cx="16" cy="48" r="3.5" fill="#aac4e0"/><circle cx="48" cy="48" r="7" fill="#1a1a2e"/><circle cx="48" cy="48" r="3.5" fill="#aac4e0"/><rect x="17" y="13" width="12" height="9" rx="2" fill="#d0eeff" opacity=".9"/><rect x="35" y="13" width="12" height="9" rx="2" fill="#d0eeff" opacity=".9"/><rect x="4" y="28" width="7" height="6" rx="1" fill="#ffe066"/><rect x="53" y="28" width="7" height="6" rx="1" fill="#ff6b6b"/><rect x="4" y="37" width="56" height="3" rx="1" fill="#2563a8"/></svg></div>
+    <div class="mm-title">Monitor Insure</div>
+    <div class="mm-sub" id="mm-welcome">เลือกรายการที่ต้องการแล้วกด Enter หรือ click mouse</div>
+  </div>
+  <div class="mm-grid">
+    <div class="mm-card" onclick="mmGo('list')">
+      <div class="mm-icon">📋</div>
+      <div><div class="mm-label">รายชื่อลูกค้า</div><div class="mm-desc">ค้นหา ดู และจัดการข้อมูล</div></div>
+    </div>
+    <div class="mm-card" onclick="mmGo('payment')">
+      <div class="mm-icon">💰</div>
+      <div><div class="mm-label">รับชำระเบี้ย</div><div class="mm-desc">บันทึกการรับเงิน</div></div>
+    </div>
+    <div class="mm-card" onclick="mmGo('report')">
+      <div class="mm-icon">🖨️</div>
+      <div><div class="mm-label">พิมพ์รายงาน</div><div class="mm-desc">รายงานและ Export CSV</div></div>
+    </div>
+    <div class="mm-card" onclick="mmGo('dashboard')">
+      <div class="mm-icon">📊</div>
+      <div><div class="mm-label">Dashboard</div><div class="mm-desc">สรุปข้อมูลและสถิติ</div></div>
+    </div>
+    <div class="mm-card" onclick="mmGo('settings')">
+      <div class="mm-icon">⚙️</div>
+      <div><div class="mm-label">ตั้งค่าระบบ</div><div class="mm-desc">บริษัท ประเภท ยี่ห้อรถ</div></div>
+    </div>
+  </div>
+  <div class="mm-footer">© 2026 Copyright © All Right Reserved</div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box" id="login-box">
+    <div class="login-logo">🛡️</div>
+    <div class="login-title">Monitor Insureance</div>
+    <div class="login-sub">กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</div>
+    <input type="password" id="login-pw" placeholder="รหัสผ่าน" maxlength="30"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">🔓 เข้าสู่ระบบ</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+
+<div class="overlay" id="ov-loading">
+  <div class="spinner"></div><div>กำลังโหลดข้อมูล...</div>
+</div>
+
+<!-- CONFIRM z-index:9000 -->
+<div class="overlay" id="ov-confirm">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="cf-icon">🗑️</div>
+    <div class="confirm-title" id="cf-title">ยืนยัน</div>
+    <span class="confirm-name" id="cf-name"></span>
+    <span class="confirm-detail" id="cf-detail"></span>
+    <span class="confirm-msg" id="cf-msg"></span>
+    <div class="confirm-btns">
+      <button class="btn btn-secondary" id="cf-no" onclick="cfNo()">NO</button>
+      <button class="btn btn-danger" id="cf-yes">YES ลบเลย</button>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 64 64"><rect x="4" y="24" width="56" height="22" rx="5" fill="#5ba3e8"/><polygon points="10,24 15,10 49,10 54,24" fill="#7bbcf0"/><rect x="4" y="36" width="56" height="10" rx="3" fill="#3a7abf"/><circle cx="16" cy="48" r="7" fill="#1a1a2e"/><circle cx="16" cy="48" r="3.5" fill="#aac4e0"/><circle cx="48" cy="48" r="7" fill="#1a1a2e"/><circle cx="48" cy="48" r="3.5" fill="#aac4e0"/><rect x="17" y="13" width="12" height="9" rx="2" fill="#d0eeff" opacity=".9"/><rect x="35" y="13" width="12" height="9" rx="2" fill="#d0eeff" opacity=".9"/><rect x="4" y="28" width="7" height="6" rx="1" fill="#ffe066"/><rect x="53" y="28" width="7" height="6" rx="1" fill="#ff6b6b"/><rect x="4" y="37" width="56" height="3" rx="1" fill="#2563a8"/></svg></div>
+    <div>
+      <div class="logo-title">Monitor Insure <span id="offline-badge" style="display:none;background:#fef3c7;color:#92400e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;vertical-align:middle;margin-left:6px">⚠ ออฟไลน์</span></div>
+      <div class="logo-sub">จัดการฐานข้อมูลลูกค้า — Firebase</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="kbd-hint">
+      <span><span class="kbd">INS</span>เพิ่ม</span>
+      <span><span class="kbd">Space</span>ค้นหา</span>
+      <span><span class="kbd">↑↓</span>เลือก</span>
+      <span><span class="kbd">Enter</span>ดู</span>
+      <span><span class="kbd">DEL</span>ลบ</span>
+      <span><span class="kbd">F2</span>ประวัติ</span>
+      <span><span class="kbd">Ctrl+F2</span>คัดลอก</span>
+      <span><span class="kbd">F5</span>ใกล้หมดอายุ</span>
+      <span><span class="kbd">F10</span>บันทึก</span>
+    </div>
+    <button class="btn-ghost" onclick="showMainMenu()">🏠 เมนูหลัก</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="stats-row" id="stats-row" style="display:none"></div>
+  <div class="card">
+    <div id="sticky-toolbar" style="position:sticky;top:0;z-index:100;background:#fff;padding:6px 0 6px 0;margin:-1rem -1rem .5rem -1rem;padding:.5rem 1rem;border-bottom:1px solid #e2e8f0;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+      <div style="position:relative;flex:1;min-width:180px;display:flex;align-items:center">
+        <input type="text" id="q" placeholder="🔍 ค้นหาชื่อ, เบอร์, ทะเบียน กด Space " oninput="doFilter();toggleClearBtn()" oncompositionend="doFilter();toggleClearBtn()" style="width:100%;padding-right:26px">
+        <button id="q-clear" onclick="clearSearch()" title="ล้างการค้นหา (ESC)" style="display:none;position:absolute;right:6px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:2px">✕</button>
+      </div>
+      
+      <select id="ft" onchange="doFilter()" style="width:auto;min-width:140px">
+        <option value="">ประเภทประกันทั้งหมด</option>
+      </select>
+      <button class="btn btn-primary" onclick="openForm()" style="white-space:nowrap">＋ เพิ่มลูกค้าใหม่</button>
+      <button id="expire-btn" onclick="toggleExpFilter()" style="padding:4px 10px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;white-space:nowrap">⚠️ <b>0</b> ราย</button>
+    </div>
+    <div class="table-wrap" id="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ชื่อ-นามสกุล / รถ</th>
+          <th class="hide-mobile">เบอร์โทร</th><th>ทะเบียน</th>
+          <th>ประเภท</th><th class="hide-mobile">บ.ประกัน</th>
+          <th>สถานะ</th><th class="hide-mobile">สิ้นสุดวันที่</th>
+          <th class="hide-mobile">เบี้ย (บาท)</th><th class="hide-mobile">ทุนประกัน (บาท)</th>
+          <th>จัดการ</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;flex-wrap:wrap;gap:5px">
+      <div id="pg-info" class="pagination-info"></div>
+      <div id="pg-info2" class="pagination-info" style="color:#94a3b8;font-size:11px"></div>
+    </div>
+    <div id="load-more-wrap" style="text-align:center;padding:8px 0;display:none">
+      <button class="btn btn-secondary" onclick="loadMore()" style="font-size:12px">⬇ โหลดเพิ่ม</button>
+    </div>
+    <div id="scroll-sentinel" style="height:4px"></div>
+  </div>
+</div>
+
+<!-- FORM MODAL -->
+<div class="overlay" id="ov-form">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <div class="modal-title" id="form-title">เพิ่มลูกค้าใหม่</div>
+      <button class="btn-close" onclick="closeForm()">✕</button>
+    </div>
+    <!-- 3 คอลัมน์ compact ไม่ scroll -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+
+      <!-- แถว 1: ชื่อ-นามสกุล (full width) -->
+      <div class="form-group" style="grid-column:1/-1">
+        <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+        <div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:4px">
+          <select id="fpx" onchange="setDirty()"></select>
+          <input type="text" id="ffn" placeholder="ชื่อ" autocomplete="new-password" oninput="setDirty()">
+          <input type="text" id="fln" placeholder="นามสกุล" autocomplete="new-password" oninput="setDirty()">
+        </div>
+        <div class="inline-add" id="ipx" style="display:none">
+          <input type="text" id="ipx-v" placeholder="เช่น พล.ต.">
+          <button class="btn btn-success btn-sm" onclick="inAdd('px')">+เพิ่ม</button>
+          <button class="btn btn-secondary btn-sm" onclick="inHide('px')">ยกเลิก</button>
+        </div>
+        <div class="add-btn-row"><button class="btn btn-secondary btn-sm" id="ipx-btn" onclick="inShow('px')">+ เพิ่มคำนำหน้า</button></div>
+      </div>
+
+      <!-- แถว 2: ที่อยู่ (full) + เบอร์โทร -->
+      <div class="form-group" style="grid-column:1/3">
+        <label>ที่อยู่</label>
+        <input type="text" id="fad" oninput="setDirty()" placeholder="บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด">
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทร <span class="req">*</span></label>
+        <input type="text" id="fph" placeholder="081-234-5678" autocomplete="new-password" oninput="setDirty()">
+      </div>
+
+      <!-- แถว 3: บริษัทประกัน -->
+      <div class="form-group" style="grid-column:1/3">
+        <label style="display:flex;align-items:center;justify-content:space-between">บริษัทประกันภัย<button class="btn btn-secondary btn-sm" id="ico-btn" onclick="inShow('co')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มบริษัทใหม่</button></label>
+        <div class="ss-wrap"><input type="text" class="ss-input" id="fco-input" placeholder="-- เลือกบริษัท --" readonly onclick="ssOpen('fco')" onkeydown="ssKey(event,'fco')" autocomplete="off"><input type="hidden" id="fco"><div class="ss-dropdown" id="fco-dd"><input class="ss-search" id="fco-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fco')" onkeydown="ssKey(event,'fco')"><div class="ss-list" id="fco-list"></div></div></div>
+        <div class="inline-add" id="ico" style="display:none"><input type="text" id="ico-v" placeholder="ชื่อบริษัท"><button class="btn btn-success btn-sm" onclick="inAdd('co')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('co')">ยกเลิก</button></div>
+      </div>
+      <!-- ประเภทประกัน -->
+      <div class="form-group">
+        <label style="display:flex;align-items:center;justify-content:space-between">ประเภทประกัน <span class="req">*</span><button class="btn btn-secondary btn-sm" id="itype-btn" onclick="inShow('type')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มใหม่</button></label>
+        <div class="ss-wrap"><input type="text" class="ss-input" id="fty-input" placeholder="-- เลือกประเภท --" readonly onclick="ssOpen('fty')" onkeydown="ssKey(event,'fty')" autocomplete="off"><input type="hidden" id="fty"><div class="ss-dropdown" id="fty-dd"><input class="ss-search" id="fty-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fty')" onkeydown="ssKey(event,'fty')"><div class="ss-list" id="fty-list"></div></div></div>
+        <div class="inline-add" id="itype" style="display:none"><input type="text" id="itype-v" placeholder="ชั้น 2+"><button class="btn btn-success btn-sm" onclick="inAdd('type')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('type')">ยกเลิก</button></div>
+      </div>
+
+      <!-- แถว 4: วันที่ -->
+      <div class="form-group">
+        <label>เริ่มต้นวันที่ <span class="req">*</span></label>
+        <input type="text" id="fsd" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="onStartDate();setDirty()">
+        <div class="year-disp" id="fsd-d"></div>
+      </div>
+      <div class="form-group">
+        <label>สิ้นสุดวันที่ <span class="req">*</span></label>
+        <input type="text" id="fed" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="showYD('fed','fed-d');autoCalcStatus();setDirty()">
+        <div class="year-disp" id="fed-d"></div>
+      </div>
+      <div class="form-group">
+        <label>สถานะ</label>
+        <div id="fst-display" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:12px;min-height:28px;display:flex;align-items:center"></div>
+        <input type="hidden" id="fst" value="active">
+      </div>
+
+      <!-- แถว 5: ยี่ห้อ รุ่น ทะเบียน -->
+      <div class="form-group">
+        <label style="display:flex;align-items:center;justify-content:space-between">ยี่ห้อรถ<button class="btn btn-secondary btn-sm" id="ibr-btn" onclick="inShow('br')" style="font-size:10px;padding:1px 6px;font-weight:400">+ เพิ่มยี่ห้อใหม่</button></label>
+        <div class="ss-wrap"><input type="text" class="ss-input" id="fbr-input" placeholder="-- เลือกยี่ห้อ --" readonly onclick="ssOpen('fbr')" onkeydown="ssKey(event,'fbr')" autocomplete="off"><input type="hidden" id="fbr"><div class="ss-dropdown" id="fbr-dd"><input class="ss-search" id="fbr-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fbr')" onkeydown="ssKey(event,'fbr')"><div class="ss-list" id="fbr-list"></div></div></div>
+        <div class="inline-add" id="ibr" style="display:none"><input type="text" id="ibr-v" placeholder="ยี่ห้อใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('br')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('br')">ยกเลิก</button></div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;justify-content:space-between">รุ่นรถ<button class="btn btn-secondary btn-sm" id="imo-btn" style="display:none;font-size:10px;padding:1px 6px;font-weight:400" onclick="inShow('mo')">+ เพิ่มรุ่นใหม่</button></label>
+        <div class="ss-wrap"><input type="text" class="ss-input" id="fmo-input" placeholder="-- เลือกรุ่น --" readonly onclick="ssOpen('fmo')" onkeydown="ssKey(event,'fmo')" autocomplete="off"><input type="hidden" id="fmo"><div class="ss-dropdown" id="fmo-dd"><input class="ss-search" id="fmo-s" placeholder="พิมพ์เพื่อค้นหา..." oninput="ssFilter('fmo')" onkeydown="ssKey(event,'fmo')"><div class="ss-list" id="fmo-list"></div></div></div>
+        <div class="inline-add" id="imo" style="display:none"><input type="text" id="imo-v" placeholder="รุ่นใหม่"><button class="btn btn-success btn-sm" onclick="inAdd('mo')">+เพิ่ม</button><button class="btn btn-secondary btn-sm" onclick="inHide('mo')">ยกเลิก</button></div>
+      </div>
+      <div class="form-group">
+        <label>ทะเบียนรถ <span class="req">*</span></label>
+        <input type="text" id="fpl" autocomplete="new-password" placeholder="กข 1234 กรุงเทพ" oninput="setDirty()">
+      </div>
+
+      <!-- แถว 6: ปีรถ ทุนประกัน เบี้ยประกัน -->
+      <div class="form-group">
+        <label>ปีรถ (ค.ศ.)</label>
+        <input type="number" id="fyr" placeholder="ปี ค.ศ." autocomplete="new-password" oninput="setDirty()" min="1900" max="2100">
+      </div>
+      <div class="form-group">
+        <label>ทุนประกันภัย (บาท)</label>
+        <input type="text" id="fcv" placeholder="จำนวนเงิน" autocomplete="new-password" oninput="numFmt(this);setDirty()" oninput="numFmt(this)" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>เบี้ยประกัน (บาท/ปี) <span class="req">*</span></label>
+        <input type="text" id="fpr" placeholder="จำนวนเงิน" autocomplete="new-password" oninput="numFmt(this);setDirty()" oninput="numFmt(this)" inputmode="numeric">
+      </div>
+
+      <!-- แถว 7: หมายเหตุ -->
+      <div class="form-group" style="grid-column:1/-1">
+        <label>หมายเหตุ</label>
+        <input type="text" id="fno" placeholder="หมายเหตุ" oninput="setDirty()">
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeForm()">ยกเลิก</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveForm()">💾 บันทึก [F10]</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="overlay" id="ov-detail">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <div class="modal-title" id="det-title">รายละเอียด</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="det-nav-wrap" style="display:none;align-items:center;gap:4px">
+          <button onclick="detNavPrev()" title="รายการก่อนหน้า" style="background:rgba(0,0,0,.08);border:1px solid #cbd5e1;color:#1e3a5f;border-radius:6px;padding:3px 10px;font-size:15px;cursor:pointer;line-height:1">‹</button>
+          <span id="det-nav-pos" style="font-size:11px;color:#64748b;min-width:40px;text-align:center"></span>
+          <button onclick="detNavNext()" title="รายการถัดไป" style="background:rgba(0,0,0,.08);border:1px solid #cbd5e1;color:#1e3a5f;border-radius:6px;padding:3px 10px;font-size:15px;cursor:pointer;line-height:1">›</button>
+        </div>
+        <button class="btn-close" onclick="closeDetail()">✕</button>
+      </div>
+    </div>
+    <div class="detail-tabs">
+      <button class="tab-btn active" id="tab-info-btn" onclick="switchTab('info')">📋 ข้อมูลทั่วไป</button>
+      <button class="tab-btn" id="tab-hist-btn" onclick="switchTab('hist')">📜 ประวัติประกัน</button>
+      <button class="tab-btn" id="tab-pay-btn" onclick="switchTab('pay')">💰 ประวัติชำระ</button>
+    </div>
+    <div class="tab-pane active" id="tab-info"><div id="det-body"></div></div>
+    <div class="tab-pane" id="tab-pay">
+      <div id="pay-hist-list" style="padding:8px 0"></div>
+    </div>
+    <div class="tab-pane" id="tab-hist">
+      <div id="hist-form-wrap" style="display:none">
+        <div class="hist-form">
+          <div class="hist-form-title" id="hf-title">➕ เพิ่มประวัติ</div>
+          <div class="hist-grid">
+            <div class="form-group"><label>บริษัทประกันภัย <span class="req">*</span></label><select id="hco"></select></div>
+            <div class="form-group"><label>ประเภทประกัน</label><select id="hty"></select></div>
+            <div class="form-group"><label>ทุนประกัน (บาท)</label><input type="text" id="hcv" placeholder="จำนวนเงิน" oninput="numFmt(this)" inputmode="numeric"></div>
+            <div class="form-group"><label>เบี้ยประกัน (บาท) <span class="req">*</span></label><input type="text" id="hpr" placeholder="จำนวนเงิน" oninput="numFmt(this)" inputmode="numeric"></div>
+            <div class="form-group">
+              <label>เริ่มต้นวันที่</label>
+              <input type="date" id="hsd" onchange="onHStartDate()">
+              <div class="year-disp" id="hsd-d"></div>
+            </div>
+            <div class="form-group">
+              <label>สิ้นสุดวันที่</label>
+              <input type="date" id="hed" onchange="showYD('hed','hed-d')">
+              <div class="year-disp" id="hed-d"></div>
+            </div>
+            <div class="form-group hist-full"><label>หมายเหตุ</label><input type="text" id="hno" placeholder="หมายเหตุ"></div>
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px">
+            <button class="btn btn-secondary btn-sm" onclick="cancelHistForm()">ยกเลิก</button>
+            <button class="btn btn-primary btn-sm" onclick="saveHist()">💾 บันทึก</button>
+          </div>
+        </div>
+      </div>
+      <div id="hist-list"></div>
+      <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" id="hist-add-btn" onclick="openHistForm(null)">➕ เพิ่มประวัติ <span style="opacity:.6;font-size:10px">[INS]</span></button>
+        <button class="btn btn-secondary btn-sm" onclick="copyFromCustomer()" title="F2">📋 คัดลอกจากข้อมูลลูกค้า <span style="opacity:.6;font-size:10px">[F2]</span></button>
+      </div>
+    </div>
+    <!-- FILE ATTACHMENTS -->
+    <div id="file-attach-section" style="padding:12px 16px;border-top:1px solid #e2e8f0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-weight:600;font-size:13px;color:#1a4f8a">📎 เอกสาร / รูปถ่าย</div>
+        <label style="cursor:pointer;background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+          ⬆️ อัปโหลด
+          <input type="file" id="file-input" multiple accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="uploadFiles(this)">
+        </label>
+      </div>
+      <div class="upload-zone" id="upload-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="event.preventDefault();this.classList.remove('dragover');uploadFiles({files:event.dataTransfer.files})">
+        📂 คลิกหรือลากไฟล์มาวางที่นี่<br>
+        <span style="font-size:10px;color:#94a3b8">รองรับ JPG, PNG, PDF, DOC (สูงสุด 10MB/ไฟล์)</span>
+      </div>
+      <div id="upload-progress-wrap" style="display:none;margin-top:6px">
+        <div style="font-size:11px;color:#3b82f6;margin-bottom:2px" id="upload-status">กำลังอัปโหลด...</div>
+        <div class="upload-progress"><div class="upload-progress-bar" id="upload-bar" style="width:0%"></div></div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+    </div>
+
+    <div class="modal-footer" id="det-footer-info">
+      <button class="btn btn-danger btn-sm" id="det-del-btn">🗑️ ลบลูกค้า</button>
+      <button class="btn btn-secondary" onclick="closeDetail()">ปิด</button>
+      <button class="btn btn-success" id="det-renew-btn" onclick="openRenew()">🔄 ต่ออายุประกัน</button>
+      <button class="btn btn-primary" id="det-edit-btn">✏️ แก้ไข</button>
+    </div>
+    <div class="modal-footer" id="det-footer-pay" style="display:none">
+      <button class="btn btn-secondary" onclick="closeDetail()">ปิด</button>
+    </div>
+    <div class="modal-footer" id="det-footer-hist" style="display:none">
+      <button class="btn btn-secondary" onclick="closeDetail()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENEW MODAL -->
+<div class="overlay" id="ov-renew" style="z-index:2000">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔄 ต่ออายุประกันภัย</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px;display:flex;gap:8px;align-items:center">ข้อมูลเดิมจะถูกบันทึกลงประวัติอัตโนมัติ<span style="display:flex;gap:5px;margin-left:4px"><span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 5px;font-size:10px;color:#475569"><b>ESC</b> ยกเลิก</span><span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 5px;font-size:10px;color:#475569"><b>F10</b> ยืนยัน</span></span></div>
+      </div>
+      <button class="btn-close" onclick="closeRenew()">✕</button>
+    </div>
+
+    <!-- แสดงข้อมูลเดิม -->
+    <div id="renew-old-box" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px">
+      <div style="font-weight:600;color:#64748b;margin-bottom:5px;font-size:10px;text-transform:uppercase;letter-spacing:.5px">📋 กรมธรรม์เดิม (จะบันทึกลงประวัติ)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 12px" id="renew-old-detail"></div>
+    </div>
+
+    <!-- ฟอร์มกรมธรรม์ใหม่ -->
+    <div style="font-weight:600;color:#1a4f8a;font-size:11px;margin-bottom:6px">✨ กรมธรรม์ใหม่</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;justify-content:space-between">บริษัทประกันภัย <span class="req">*</span><span style="font-size:10px;color:#94a3b8;font-weight:400">แก้ไขได้</span></label>
+        <select id="rco" onchange="setRenewDirty()"></select>
+      </div>
+
+      <div class="form-group">
+        <label>ประเภทประกัน <span class="req">*</span></label>
+        <select id="rty" onchange="setRenewDirty()"></select>
+      </div>
+      <div class="form-group">
+        <label>เบี้ยประกัน (บาท) <span class="req">*</span></label>
+        <input type="text" id="rpr" placeholder="จำนวนเงิน" oninput="numFmt(this);setRenewDirty()" inputmode="numeric">
+      </div>
+
+      <div class="form-group">
+        <label>ทุนประกันภัย (บาท)</label>
+        <input type="text" id="rcv" placeholder="จำนวนเงิน" oninput="numFmt(this);setRenewDirty()" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>สถานะ</label>
+        <div id="rst-display" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:12px;min-height:28px;display:flex;align-items:center"></div>
+        <input type="hidden" id="rst" value="active">
+      </div>
+
+      <div class="form-group">
+        <label>วันที่เริ่มต้น <span class="req">*</span></label>
+        <input type="date" id="rsd" onchange="onRenewStartDate();setRenewDirty()">
+        <div class="year-disp" id="rsd-d"></div>
+      </div>
+      <div class="form-group">
+        <label>วันที่สิ้นสุด <span class="req">*</span></label>
+        <input type="date" id="red" onchange="showYD('red','red-d');onRenewEndDate();setRenewDirty()">
+        <div class="year-disp" id="red-d"></div>
+      </div>
+
+      <div class="form-group" style="grid-column:1/-1">
+        <label>หมายเหตุ</label>
+        <input type="text" id="rno" placeholder="หมายเหตุสำหรับกรมธรรม์ใหม่" oninput="setRenewDirty()">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeRenew()">ยกเลิก</button>
+      <button class="btn btn-success" id="renew-save-btn" onclick="saveRenew()">🔄 ยืนยันต่ออายุ</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD MODAL -->
+<div class="overlay" id="ov-dash" style="z-index:1800;overflow-y:auto;overscroll-behavior:contain">
+  <div class="modal" style="max-width:900px;width:96%;max-height:90vh;overflow-y:auto;overscroll-behavior:contain;padding:0">
+    <div class="modal-header" style="position:sticky;top:0;z-index:10;background:#1a4f8a">
+      <div>
+        <div class="modal-title" style="color:#fff">📊 Dashboard สรุปข้อมูลประกัน</div>
+        <div style="font-size:10px;color:#93c5fd;margin-top:2px" id="dash-updated"></div>
+      </div>
+      <button class="btn-close" onclick="closeDash()" style="color:#fff;opacity:.7">✕</button>
+    </div>
+    <div style="padding:14px" id="dash-body">
+      <div style="text-align:center;color:#94a3b8;padding:40px">กำลังโหลด...</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="overlay" id="ov-payment" style="z-index:1800;padding-top:env(safe-area-inset-top,0px);box-sizing:border-box">
+  <div class="modal" style="max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;padding:0;margin:0">
+    <div class="modal-header" style="background:#1a4f8a;flex-shrink:0;padding:8px 12px">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <div class="modal-title" style="color:#fff;font-size:14px;white-space:nowrap">💰 รับชำระเบี้ย</div>
+        <div style="font-size:9px;color:#93c5fd;display:none" class="kbd-hint">INS=เพิ่ม | Enter=ดู | ESC=ออก</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <div style="text-align:right;line-height:1.3">
+          <div style="font-size:9px;color:#93c5fd">ยอดค้างทั้งหมด</div>
+          <div id="pay-list-total-balance" style="font-size:13px;font-weight:700;color:#fca5a5">0.00</div>
+        </div>
+        <button onclick="payNewForm()"
+          style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;font-size:13px;border-radius:6px;cursor:pointer;white-space:nowrap;font-weight:600">
+          ➕ เพิ่ม
+        </button>
+        <button class="btn-close" onclick="closePayment()" style="color:#fff;opacity:.7">✕</button>
+      </div>
+    </div>
+
+    <!-- ส่วนค้นหา -->
+    <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#fff;flex-shrink:0">
+      <input type="text" id="pay-list-search" placeholder="🔍 ค้นหาชื่อ, ทะเบียน..."
+        style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box"
+        oninput="filterPayList()" oncompositionend="filterPayList()">
+    </div>
+
+    <!-- รายการ -->
+    <div id="pay-list-body" style="flex:1;overflow-y:auto;overscroll-behavior:contain;background:#f8fafc">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="position:sticky;top:0;background:#f1f5f9;z-index:1">
+            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">ชื่อ-นามสกุล</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">ทะเบียน</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">ยี่ห้อ/รุ่น</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">งวด / วันที่ล่าสุด</th>
+            <th style="padding:8px 12px;text-align:right;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">ยอดรวม</th>
+            <th style="padding:8px 12px;text-align:right;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">ชำระแล้ว</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">สถานะ</th>
+            <th style="padding:8px 8px;border-bottom:1px solid #e2e8f0;width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="pay-list-tbody">
+          <tr><td colspan="8" style="padding:20px;text-align:center;font-size:12px;color:#94a3b8">กำลังโหลด...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT FORM MODAL -->
+<div class="overlay" id="ov-pay-form" style="z-index:1900;padding-top:env(safe-area-inset-top,0px);box-sizing:border-box">
+  <div class="modal" style="max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;padding:0;margin:0">
+    <!-- Header -->
+    <div class="modal-header" style="background:#1a4f8a;flex-shrink:0">
+      <div>
+        <div class="modal-title" style="color:#fff" id="pay-form-title">➕ เพิ่มรายการรับชำระ</div>
+        <div style="font-size:10px;color:#93c5fd;margin-top:2px">F10=บันทึก | ESC=ปิด <span style="display:inline-block" class="mobile-only">| เลื่อนขวาเพื่อดูการชำระ →</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="pay-nav-wrap" style="display:none;align-items:center;gap:4px">
+          <button onclick="payNavPrev()" title="รายการก่อนหน้า" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:3px 10px;font-size:15px;cursor:pointer;line-height:1">‹</button>
+          <span id="pay-nav-pos" style="font-size:11px;color:#93c5fd;min-width:40px;text-align:center"></span>
+          <button onclick="payNavNext()" title="รายการถัดไป" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:3px 10px;font-size:15px;cursor:pointer;line-height:1">›</button>
+        </div>
+        <button class="btn-close" onclick="closePayForm()" style="color:#fff;opacity:.7">✕</button>
+      </div>
+    </div>
+
+    <!-- 2 Panel Body -->
+    <div style="display:flex;flex:1;overflow:hidden;min-height:0;overflow-x:auto">
+
+      <!-- Panel ซ้าย: ข้อมูลลูกค้า + รายการค่าใช้จ่าย -->
+      <div style="min-width:320px;width:50%;border-right:1px solid #e2e8f0;overflow:hidden;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0">
+
+        <!-- ค้นหาลูกค้า -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px">
+          <div style="font-weight:600;color:#1a4f8a;font-size:11px;margin-bottom:4px">🔍 ค้นหาลูกค้า</div>
+          <input type="text" id="pay-search" placeholder="ชื่อ, นามสกุล หรือ ทะเบียนรถ"
+            style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box"
+            oninput="paySearch();paySearchSelIdx=-1;" oncompositionend="paySearch();paySearchSelIdx=-1;"
+            onkeydown="paySearchKeyNav(event)">
+          <div id="pay-search-results" style="margin-top:4px;max-height:130px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #e2e8f0;border-radius:6px;background:#fff;display:none"></div>
+        </div>
+
+        <!-- ข้อมูลลูกค้า -->
+        <div id="pay-customer-info" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:7px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:11px">
+            <div><span style="color:#64748b">ชื่อ-สกุล: </span><span id="pay-name" style="font-weight:600"></span></div>
+            <div><span style="color:#64748b">ทะเบียน: </span><span id="pay-plate" style="font-weight:600"></span></div>
+            <div><span style="color:#64748b">ยี่ห้อ/รุ่น: </span><span id="pay-car"></span></div>
+            <div><span style="color:#64748b">เบี้ยรวม: </span><span id="pay-premium" style="color:#1a4f8a;font-weight:600"></span></div>
+          </div>
+          <div id="pay-policy-sel-wrap"></div>
+        </div>
+
+        <!-- รายการค่าใช้จ่าย -->
+        <div id="pay-detail-section" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px">
+          <div style="font-weight:600;color:#1a4f8a;font-size:11px;margin-bottom:4px">📋 รายการค่าใช้จ่าย</div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">ค่าเบี้ยประกัน</label>
+              <input type="text" id="pay-ins" onchange="payDirty=true" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">ค่าตรวจสภาพรถ</label>
+              <input type="text" id="pay-inspect" onchange="payDirty=true" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">สภาพถังแก๊ส</label>
+              <input type="text" id="pay-gas" onchange="payDirty=true" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">ต่อภาษี</label>
+              <input type="text" id="pay-tax" onchange="payDirty=true" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#dc2626;flex-shrink:0;font-weight:600">ส่วนลด</label>
+              <input type="text" id="pay-discount" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #fca5a5;border-radius:5px;font-size:12px;text-align:right;color:#dc2626;background:#fff1f2;font-weight:600"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)" onchange="payDirty=true">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">อื่นๆ (ระบุ)</label>
+              <input type="text" id="pay-other-label" placeholder="รายละเอียด"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="width:110px;font-size:11px;color:#475569;flex-shrink:0">ยอดอื่นๆ</label>
+              <input type="text" id="pay-other" onchange="payDirty=true" placeholder="0.00" inputmode="decimal"
+                style="flex:1;padding:2px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"
+                oninput="fmtPayField(this);calcPayTotal()" onblur="fmtPayBlur(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;border-top:2px solid #e2e8f0;padding-top:5px;margin-top:2px">
+              <label style="width:120px;font-size:13px;font-weight:700;color:#1a4f8a;flex-shrink:0">ยอดรวม</label>
+              <div id="pay-total" style="flex:1;text-align:right;font-size:14px;font-weight:700;color:#1a4f8a">0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- หมายเหตุ -->
+        <div id="pay-note-section" style="display:none">
+          <textarea id="pay-note" onchange="payDirty=true" placeholder="หมายเหตุ"
+            style="width:100%;padding:3px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;resize:none;height:36px;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+
+      <!-- Panel ขวา: วันที่+ยอดชำระ -->
+      <div id="pay-payment-section" style="display:none;min-width:300px;width:50%;flex-direction:column;min-height:0;background:#f0fdf4">
+        <!-- rows + summary รวมกันใน scroll เดียว บน mobile ไม่มีช่องว่างระหว่างงวดกับยอดสรุป -->
+        <div style="flex:1;overflow-y:auto;overscroll-behavior:contain;padding:12px 12px 0;display:flex;flex-direction:column">
+          <div style="font-weight:600;color:#166534;font-size:12px;margin-bottom:8px">💵 การชำระเงิน</div>
+          <div style="display:grid;grid-template-columns:28px 1fr 1fr;gap:4px;margin-bottom:4px;padding:0 2px">
+            <div style="font-size:11px;font-weight:600;color:#166534">#</div>
+            <div style="font-size:11px;font-weight:600;color:#166534">วันที่ชำระ (พ.ศ.)</div>
+            <div style="font-size:11px;font-weight:600;color:#166534;text-align:right">ยอดชำระ (บาท)</div>
+          </div>
+          <div id="pay-rows" style="display:flex;flex-direction:column;gap:3px"></div>
+          <!-- ยอดสรุป + ปุ่ม — ติดใต้งวดสุดท้ายทันที ไม่มีช่องว่าง -->
+          <div style="border-top:2px solid #d1fae5;padding:8px 2px 12px;margin-top:8px;background:#f0fdf4">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span style="color:#475569">ยอดที่ต้องชำระทั้งหมด</span>
+              <span id="pay-total-right" style="font-weight:600;color:#1a4f8a">0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span style="color:#475569">ชำระรวมทั้งหมด</span>
+              <span id="pay-paid-sum" style="font-weight:600;color:#16a34a">0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:10px">
+              <span style="color:#dc2626">ยอดคงค้าง</span>
+              <span id="pay-balance" style="color:#dc2626">0.00</span>
+            </div>
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <button class="btn btn-secondary" onclick="closePayForm()">ยกเลิก</button>
+              <button class="btn btn-primary" id="pay-save-btn" style="display:none" onclick="savePayment()">💾 บันทึก [F10]</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel ขวา placeholder -->
+      <div id="pay-payment-placeholder" style="min-width:300px;width:50%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;background:#f8fafc">
+        เลือกลูกค้าเพื่อกรอกรายการชำระ
+      </div>
+
+    </div>
+
+    <div class="modal-footer" id="pay-form-footer" style="flex-shrink:0;display:none">
+      <button class="btn btn-secondary" onclick="closePayForm()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- REPORT MODAL -->
+<div class="overlay" id="ov-report" style="z-index:1800">
+  <div class="modal modal-md">
+    <div class="modal-header" style="background:#1a4f8a">
+      <div>
+        <div class="modal-title" style="color:#fff">🖨️ พิมพ์รายงาน</div>
+        <div style="font-size:10px;color:#93c5fd;margin-top:2px;display:flex;gap:8px;align-items:center">เลือกประเภทรายงาน<span style="background:rgba(255,255,255,.15);border-radius:3px;padding:1px 5px;font-size:10px"><b>ESC</b> กลับเมนูหลัก</span></div>
+      </div>
+      <button class="btn-close" onclick="closeReport()" style="color:#fff;opacity:.7">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+
+      <!-- เมนูย่อย 1: พิมพ์รายงานสิ้นสุดความคุ้มครอง -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <div style="font-weight:600;color:#1a4f8a;font-size:13px;margin-bottom:10px">📅 รายงานสิ้นสุดความคุ้มครอง</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:10px">เลือกเดือนที่ต้องการพิมพ์รายงาน (ปีปัจจุบัน)</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="form-group" style="margin:0;flex:1;min-width:120px">
+            <label>เดือน (MM)</label>
+            <select id="rpt-month" style="width:100%" onchange="updateRptCount()">
+              <option value="01">มกราคม (01)</option>
+              <option value="02">กุมภาพันธ์ (02)</option>
+              <option value="03">มีนาคม (03)</option>
+              <option value="04">เมษายน (04)</option>
+              <option value="05">พฤษภาคม (05)</option>
+              <option value="06">มิถุนายน (06)</option>
+              <option value="07">กรกฎาคม (07)</option>
+              <option value="08">สิงหาคม (08)</option>
+              <option value="09">กันยายน (09)</option>
+              <option value="10">ตุลาคม (10)</option>
+              <option value="11">พฤศจิกายน (11)</option>
+              <option value="12">ธันวาคม (12)</option>
+            </select>
+          </div>
+          <div style="padding-top:18px">
+            <button class="btn btn-primary" onclick="printExpireReport()">🖨️ พิมพ์</button>
+          </div>
+        </div>
+        <div id="rpt-count" style="font-size:11px;color:#64748b;margin-top:8px"></div>
+      </div>
+
+      <!-- เมนูย่อย 2: Export CSV -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <div style="font-weight:600;color:#1a4f8a;font-size:13px;margin-bottom:6px">📤 Export CSV</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:10px">ส่งออกข้อมูลลูกค้าทั้งหมดเป็นไฟล์ CSV</div>
+        <button class="btn btn-secondary" onclick="doExportCSV()">📥 Download CSV</button>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeReport()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="ov-settings">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ ตั้งค่าระบบ</div>
+      <button class="btn-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-grid">
+      <div>
+        <div class="settings-col-title">👤 คำนำหน้า</div>
+        <div class="settings-list" id="sl-px"></div>
+        <div class="settings-add"><input type="text" id="sl-px-v" placeholder="นาย"><button class="btn btn-primary btn-sm" onclick="slAdd('px')">+</button></div>
+      </div>
+      <div>
+        <div class="settings-col-title">🛡️ ประเภทประกัน</div>
+        <div class="settings-list" id="sl-type"></div>
+        <div class="settings-add"><input type="text" id="sl-type-v" placeholder="ชั้น 2+"><button class="btn btn-primary btn-sm" onclick="slAdd('type')">+</button></div>
+      </div>
+      <div>
+        <div class="settings-col-title">🏢 บริษัทประกันภัย</div>
+        <div class="settings-list" id="sl-co"></div>
+        <div class="settings-add"><input type="text" id="sl-co-v" placeholder="ชื่อบริษัท"><button class="btn btn-primary btn-sm" onclick="slAdd('co')">+</button></div>
+      </div>
+      <div>
+        <div class="settings-col-title">🚗 ยี่ห้อรถ</div>
+        <div class="settings-list" id="sl-br"></div>
+        <div class="settings-add"><input type="text" id="sl-br-v" placeholder="Toyota"><button class="btn btn-primary btn-sm" onclick="slAdd('br')">+</button></div>
+      </div>
+      <div>
+        <div class="settings-col-title">🔖 รุ่นรถ</div>
+        <div style="margin-bottom:4px"><select id="sl-br-sel" onchange="renderSlModel()" style="font-size:11px"><option value="">-- เลือกยี่ห้อ --</option></select></div>
+        <div class="settings-list" id="sl-mo"></div>
+        <div class="settings-add"><input type="text" id="sl-mo-v" placeholder="Camry 2024"><button class="btn btn-primary btn-sm" onclick="slAdd('mo')">+</button></div>
+      </div>
+    </div>
+    <!-- เปลี่ยนรหัสผ่าน -->
+    <div style="border-top:1px solid #e2e8f0;padding:12px 0 4px">
+      <div style="font-weight:600;color:#1a4f8a;font-size:12px;margin-bottom:8px">🔒 เปลี่ยนรหัสผ่าน</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label>รหัสผ่านใหม่</label>
+          <input type="password" id="new-pw1" placeholder="รหัสผ่านใหม่" autocomplete="new-password">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>ยืนยันรหัสผ่าน</label>
+          <input type="password" id="new-pw2" placeholder="ยืนยันอีกครั้ง" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="changePassword()">🔒 บันทึก</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeSettings()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var customers=[],insTypes=[],insCos=[],brands=[],models={},prefixes=[],filtered=[];
+// expose to Firebase module
+window._getCustomers=function(){return customers;};window._setCustomers=function(v){customers=v;};
+window._getInsTypes=function(){return insTypes;};window._setInsTypes=function(v){insTypes=v;};
+window._getInsCos=function(){return insCos;};window._setInsCos=function(v){insCos=v;};
+window._getBrands=function(){return brands;};window._setBrands=function(v){brands=v;};
+window._getModels=function(){return models;};window._setModels=function(v){models=v;};
+window._getPrefixes=function(){return prefixes;};window._setPrefixes=function(v){prefixes=v;};
+var dispCount=20,batchSize=20; // infinite scroll
+var scrollSelected=false; // ติดตามว่า selection มาจาก scroll wheel
+var selIdx=-1,editId=null,detailId=null,editHistIdx=null,selHistIdx=-1;
+var cfCallback=null,histData=[];
+
+// window.onload replaced by Firebase module boot above
+</script>
+<script src="app.js"></script>
+</body>
+</html>
