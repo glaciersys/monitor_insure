@@ -1,1 +1,32 @@
+name: Deploy to Firebase Hosting
 
+# รันอัตโนมัติทุกครั้งที่ push เข้า branch main (รวมถึง commit ที่ทำผ่านมือถือ/เว็บ GitHub โดยตรง)
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # bump เลข CACHE_VERSION ใน sw.js ทุกครั้งก่อน deploy (เหมือน predeploy hook ที่ใช้ตอน deploy จากเครื่อง)
+      # ใส่ไว้ตรงนี้ด้วยเผื่อ predeploy hook ใน firebase.json ไม่ถูกเรียกตอน deploy ผ่าน Action
+      - name: Bump service worker cache version
+        run: node bump-version.js
+
+      - name: Deploy to Firebase Hosting (live channel)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: insuresys-839eb
+          channelId: live
