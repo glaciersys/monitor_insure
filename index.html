@@ -745,12 +745,12 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
 
       <div class="form-group">
         <label>วันที่เริ่มต้น <span class="req">*</span></label>
-        <input type="date" id="rsd" onchange="onRenewStartDate();setRenewDirty()">
+        <input type="text" id="rsd" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="onRenewStartDate();setRenewDirty()">
         <div class="year-disp" id="rsd-d"></div>
       </div>
       <div class="form-group">
         <label>วันที่สิ้นสุด <span class="req">*</span></label>
-        <input type="date" id="red" onchange="showYD('red','red-d');onRenewEndDate();setRenewDirty()">
+        <input type="text" id="red" placeholder="วว/ดด/ปปปป" inputmode="numeric" maxlength="10" oninput="fmtDateInput(this)" onchange="showYD('red','red-d');onRenewEndDate();setRenewDirty()">
         <div class="year-disp" id="red-d"></div>
       </div>
 
@@ -1182,6 +1182,10 @@ window.toast=function toast(msg,type){
 function fmtDate(d){
   if(!d||d===''||d==='-')return '-';
   try{var p=d.split('-');if(p.length!==3)return d;var y=parseInt(p[0],10);if(isNaN(y))return d;var be=(y>2400)?y:y+543;return p[2]+'/'+p[1]+'/'+String(be).slice(-2);}catch(e){return d;}
+}
+function fmtDateFull(d){
+  if(!d||d===''||d==='-')return '-';
+  try{var p=d.split('-');if(p.length!==3)return d;var y=parseInt(p[0],10);if(isNaN(y))return d;var be=(y>2400)?y:y+543;return p[2]+'/'+p[1]+'/'+be;}catch(e){return d;}
 }
 function fmtNumRpt(n){
   var v=parseFloat(String(n===null||n===undefined?'0':n).replace(/,/g,''));
@@ -2139,7 +2143,7 @@ function openDetail(id){
     row('เบอร์โทร',c.phone||'-')+row('ที่อยู่',c.address||'-')+row('ทะเบียนรถ',c.plate||'-')+row('ยี่ห้อ/รุ่น/ปี',car)+
     row('ประเภทประกัน',typeBadge(c.type))+row('บริษัทประกันภัย',c.insco||'-')+
     row('เบี้ยประกัน',fmtNum(c.premium)+' บาท')+row('ทุนประกันภัย',fmtNum(c.coverage)+' บาท')+
-    row('เริ่มต้นวันที่',fmtDate(c.start))+row('สิ้นสุดวันที่',fmtDate(c.end))+
+    row('เริ่มต้นวันที่',fmtDateFull(c.start))+row('สิ้นสุดวันที่',fmtDateFull(c.end))+
     row('สถานะ',statusBadge(c))+(c.note?row('หมายเหตุ',esc(c.note)):'');
   document.getElementById('det-edit-btn').onclick=function(){closeDetail();openForm(id);};
   document.getElementById('det-del-btn').onclick=function(){askDel(id);};
@@ -2171,7 +2175,7 @@ function _detFill(id){
     row('เบอร์โทร',c.phone||'-')+row('ที่อยู่',c.address||'-')+row('ทะเบียนรถ',c.plate||'-')+row('ยี่ห้อ/รุ่น/ปี',car)+
     row('ประเภทประกัน',typeBadge(c.type))+row('บริษัทประกันภัย',c.insco||'-')+
     row('เบี้ยประกัน',fmtNum(c.premium)+' บาท')+row('ทุนประกันภัย',fmtNum(c.coverage)+' บาท')+
-    row('เริ่มต้นวันที่',fmtDate(c.start))+row('สิ้นสุดวันที่',fmtDate(c.end))+
+    row('เริ่มต้นวันที่',fmtDateFull(c.start))+row('สิ้นสุดวันที่',fmtDateFull(c.end))+
     row('สถานะ',statusBadge(c))+(c.note?row('หมายเหตุ',esc(c.note)):'');
   document.getElementById('det-edit-btn').onclick=function(){closeDetail();openForm(id);};
   document.getElementById('det-del-btn').onclick=function(){askDel(id);};
@@ -2341,8 +2345,8 @@ function openRenew(){
     newStart=c.end;
     newEnd=addOneYear(c.end);
   }
-  document.getElementById('rsd').value=newStart;
-  document.getElementById('red').value=newEnd;
+  document.getElementById('rsd').value=newStart ? isoToBE(newStart) : '';
+  document.getElementById('red').value=newEnd ? isoToBE(newEnd) : '';
   showYD('rsd','rsd-d');showYD('red','red-d');
   // สถานะ
   var dl=daysLeft(newEnd);var st='active';
@@ -2358,12 +2362,15 @@ function onRenewStartDate(){
   // ถ้ายังไม่มีวันสิ้นสุด ให้ auto +1 ปี
   var sd=document.getElementById('rsd').value;
   if(sd&&!document.getElementById('red').value){
-    document.getElementById('red').value=addOneYear(sd);
-    showYD('red','red-d');onRenewEndDate();
+    var sdISO=beToISO(sd);
+    if(sdISO){
+      document.getElementById('red').value=isoToBE(addOneYear(sdISO));
+      showYD('red','red-d');onRenewEndDate();
+    }
   }
 }
 function onRenewEndDate(){
-  var ed=document.getElementById('red').value;
+  var ed=beToISO(document.getElementById('red').value);
   var dl=daysLeft(ed);var st='active';
   if(dl!==null&&dl>=0&&dl<=90)st='expire';
   document.getElementById('rst').value=st;
@@ -2387,19 +2394,21 @@ function saveRenew(){
   if(!ty){toast('กรุณาเลือกประเภทประกัน','error');return;}
   if(!pr){toast('กรุณากรอกเบี้ยประกัน','error');return;}
   if(!sd||!ed){toast('กรุณาระบุวันเริ่มต้น-สิ้นสุด','error');return;}
+  var sdISO=beToISO(sd);var edISO=beToISO(ed);
+  if(!sdISO||!edISO){toast('รูปแบบวันที่ไม่ถูกต้อง (วว/ดด/ปปปป)','error');return;}
   var btn=document.getElementById('renew-save-btn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
   // ข้อมูลประวัติ (กรมธรรม์เดิม)
   var histData_new={custId:c.id,custName:fullName(c),insco:c.insco||'',type:c.type||'',coverage:c.coverage||0,premium:c.premium||0,start:c.start||'',end:c.end||'',note:'[ต่ออายุ] '+new Date().toLocaleDateString('th-TH')};
   // ข้อมูลลูกค้าใหม่
   var st=document.getElementById('rst').value;
-  var newData={id:c.id,insco:co,type:ty,premium:pr,coverage:cv,start:sd,end:ed,status:st,note:document.getElementById('rno').value.trim()};
+  var newData={id:c.id,insco:co,type:ty,premium:pr,coverage:cv,start:sdISO,end:edISO,status:st,note:document.getElementById('rno').value.trim()};
   // บันทึกประวัติก่อน แล้วค่อย update ลูกค้า
   fsAddHistory(histData_new).then(function(){
     return fsUpdateCustomer(Object.assign({},customers.find(function(x){return x.id===c.id;}),newData));
   }).then(function(){
     btn.disabled=false;btn.textContent='🔄 ยืนยันต่ออายุ';
     var i=customers.findIndex(function(x){return x.id===c.id;});
-    if(i>=0){customers[i]=Object.assign({},customers[i],{insco:co,type:ty,premium:pr,coverage:cv,start:sd,end:ed,status:st,note:newData.note||customers[i].note});}
+    if(i>=0){customers[i]=Object.assign({},customers[i],{insco:co,type:ty,premium:pr,coverage:cv,start:sdISO,end:edISO,status:st,note:newData.note||customers[i].note});}
     updateStats();doFilter();
     ovHide('ov-renew');renewDirty=false;
     loadHist(c.id);openDetail(c.id);
