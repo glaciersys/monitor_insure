@@ -1,10 +1,8 @@
 name: Deploy to Firebase Hosting
 
-# รันอัตโนมัติทุกครั้งที่ push เข้า branch main (รวมถึง commit ที่ทำผ่านมือถือ/เว็บ GitHub โดยตรง)
+# ไม่ deploy อัตโนมัติตอน push แล้ว — ต้องเข้าไปกด "Run workflow" เองในแท็บ Actions ทุกครั้งที่ต้องการ deploy
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: {}
 
 jobs:
   deploy:
