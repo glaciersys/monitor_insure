@@ -1,4 +1,4 @@
-// sw.js — Monitor Insure 29/06/69 
+// sw.js — Monitor Insure 29/06/69     
 // อัปเดตเลขเวอร์ชันนี้ทุกครั้งที่ deploy เพื่อบังคับให้ผู้ใช้ได้ไฟล์ใหม่
 const CACHE_VERSION = 'monitor-insure-20260628-205703';
 const APP_SHELL = [
