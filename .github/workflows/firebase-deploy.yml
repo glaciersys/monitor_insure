@@ -1,12 +1,17 @@
 name: Deploy to Firebase Hosting
 
-# ไม่ deploy อัตโนมัติตอน push แล้ว — ต้องเข้าไปกด "Run workflow" เองในแท็บ Actions ทุกครั้งที่ต้องการ deploy
+# รันอัตโนมัติทุกครั้งที่ push เข้า branch main
+# แต่จะหยุดรอ Approval ก่อน deploy จริง (Environment Protection)
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: mndep   # ← ตรงนี้ทำให้ GitHub หยุดรอ Approve ก่อน deploy
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -16,8 +21,6 @@ jobs:
         with:
           node-version: 20
 
-      # bump เลข CACHE_VERSION ใน sw.js ทุกครั้งก่อน deploy (เหมือน predeploy hook ที่ใช้ตอน deploy จากเครื่อง)
-      # ใส่ไว้ตรงนี้ด้วยเผื่อ predeploy hook ใน firebase.json ไม่ถูกเรียกตอน deploy ผ่าน Action
       - name: Bump service worker cache version
         run: node bump-version.js
 
