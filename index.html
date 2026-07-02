@@ -2426,11 +2426,27 @@ window.addEventListener('popstate', function(e){
   if(ovIsOpen('ov-settings')){closeSettings();showMainMenu();return;}
   if(ovIsOpen('ov-report')){closeReport();return;}
   if(ovIsOpen('ov-pay-form')){closePayForm();return;}
-  if(ovIsOpen('ov-payment')){closePayment();return;}
+  if(ovIsOpen('ov-payment')){
+    // ถ้าช่องค้นหามีข้อความอยู่ ให้ clear ก่อน แล้วรอพิมพ์ใหม่ได้เลย (เหมือน ESC บน desktop)
+    var pls=document.getElementById('pay-list-search');
+    if(pls&&pls.value){
+      pls.value='';filterPayList();pls.focus();
+      // push state คืนเพื่อให้ back ครั้งต่อไปยังอยู่ใน payment modal ก่อน ไม่ออกไปเลย
+      history.pushState(null,'','');
+      return;
+    }
+    closePayment();return;
+  }
   if(ovIsOpen('ov-dash')){closeDash();showMainMenu();return;}
-  // ถ้าไม่มี modal — กลับ main menu เสมอ
+  // ถ้าไม่มี modal — ถ้าช่องค้นหา card 1 มีข้อความ ให้ clear ก่อน ไม่ออกไป main menu เลย
   var mm=document.getElementById('main-menu');
   if(mm&&mm.classList.contains('hidden')){
+    var q=document.getElementById('q');
+    if(q&&q.value){
+      q.value='';doFilter();toggleClearBtn();q.focus();
+      history.pushState(null,'','');
+      return;
+    }
     showMainMenu();
   } else {
     history.pushState(null,'','');
