@@ -2616,9 +2616,11 @@ var payDirty=false;
 function openPayment(){
   hideMainMenu();
   history.replaceState({page:'payment'},'','');
-  // เคลียร์ช่องค้นหาและ dropdown ทุกครั้งที่เปิดหน้าใหม่
+  // เคลียร์ช่องค้นหาทั้ง 2 ตัว และ dropdown ทุกครั้งที่เปิดหน้าใหม่
   var ps=document.getElementById('pay-search');
   if(ps)ps.value='';
+  var pls=document.getElementById('pay-list-search');
+  if(pls)pls.value='';
   var psr=document.getElementById('pay-search-results');
   if(psr){psr.innerHTML='';psr.style.display='none';}
   paySearchSelIdx=-1;
