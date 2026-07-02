@@ -459,7 +459,7 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
   <div class="card">
     <div id="sticky-toolbar" style="position:sticky;top:0;z-index:100;background:#fff;padding:6px 0 6px 0;margin:-1rem -1rem .5rem -1rem;padding:.5rem 1rem;border-bottom:1px solid #e2e8f0;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
       <div style="position:relative;flex:1;min-width:180px;display:flex;align-items:center">
-        <input type="text" id="q" placeholder="🔍 ค้นหาชื่อ, เบอร์, ทะเบียน กด Space " oninput="doFilter();toggleClearBtn()" oncompositionend="doFilter();toggleClearBtn()" style="width:100%;padding-right:26px">
+        <input type="text" id="q" placeholder="🔍 ค้นหาชื่อ, เบอร์, ทะเบียน กด Space " oninput="qOnInput()" oncompositionend="qOnInput()" style="width:100%;padding-right:26px">
         <button id="q-clear" onclick="clearSearch()" title="ล้างการค้นหา (ESC)" style="display:none;position:absolute;right:6px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:2px">✕</button>
       </div>
       
@@ -808,7 +808,7 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
     <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#fff;flex-shrink:0">
       <input type="text" id="pay-list-search" placeholder="🔍 ค้นหาชื่อ, ทะเบียน..."
         style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box"
-        oninput="filterPayList()" oncompositionend="filterPayList()">
+        oninput="plsOnInput()" oncompositionend="plsOnInput()">
     </div>
 
     <!-- รายการ -->
@@ -1411,6 +1411,7 @@ function clearSearch(){
   doFilter();
   qi.blur();
   document.body.focus();
+  _qSearchPushed=false;
 }
 function toggleClearBtn(){
   var v=document.getElementById('q').value;
@@ -1617,7 +1618,7 @@ document.addEventListener('keydown',function(e){
     if(ovIsOpen("ov-payment")){
       // ถ้าช่องค้นหามีข้อความอยู่ ให้ clear ก่อน แล้วรอพิมพ์ใหม่ได้เลย (เหมือน card 1)
       var pls=document.getElementById('pay-list-search');
-      if(pls&&pls.value){pls.value='';filterPayList();pls.focus();return;}
+      if(pls&&pls.value){pls.value='';filterPayList();pls.focus();_plsSearchPushed=false;return;}
       closePayment();return;
     }
     if(ovIsOpen('ov-report')){closeReport();return;}
@@ -2420,6 +2421,24 @@ document.getElementById('ov-renew').addEventListener('click',function(e){if(e.ta
 var _guardSeq=0;
 function pushGuard(){ history.pushState({guard:++_guardSeq},'',''); }
 
+// เมื่อผู้ใช้เริ่มพิมพ์ในช่องค้นหา (ว่าง -> มีตัวอักษร) ให้ push history entry พิเศษ 1 ตัว
+// เพื่อให้ปุ่ม Back ของเบราว์เซอร์ "กินเข้าไปพอดี" 1 ครั้งสำหรับ clear ช่องค้นหา
+// โดยไม่ต้องพึ่ง logic แก้ทีหลังแบบ reactive ซึ่งอาจตามไม่ทันบนมือถือ
+var _qSearchPushed=false;
+function qOnInput(){
+  doFilter();toggleClearBtn();
+  var v=document.getElementById('q').value;
+  if(v&&!_qSearchPushed){_qSearchPushed=true;history.pushState({page:'list',searching:true},'','');}
+  else if(!v&&_qSearchPushed){_qSearchPushed=false;} // เคลียร์เองด้วยมือ (ไม่ใช่ปุ่ม back) — reset flag เผื่อพิมพ์ใหม่รอบหน้า
+}
+var _plsSearchPushed=false;
+function plsOnInput(){
+  filterPayList();
+  var v=document.getElementById('pay-list-search').value;
+  if(v&&!_plsSearchPushed){_plsSearchPushed=true;history.pushState({page:'payment',searching:true},'','');}
+  else if(!v&&_plsSearchPushed){_plsSearchPushed=false;}
+}
+
 window.addEventListener('popstate', function(e){
   // ปิด modal ที่เปิดอยู่ตามลำดับความสำคัญ
   if(ovIsOpen('ov-confirm')){cfNo();return;}
@@ -2430,25 +2449,32 @@ window.addEventListener('popstate', function(e){
   if(ovIsOpen('ov-report')){closeReport();return;}
   if(ovIsOpen('ov-pay-form')){closePayForm();return;}
   if(ovIsOpen('ov-payment')){
-    // ถ้าช่องค้นหามีข้อความอยู่ ให้ clear ก่อน แล้วรอพิมพ์ใหม่ได้เลย (เหมือน ESC บน desktop)
-    var pls=document.getElementById('pay-list-search');
-    if(pls&&pls.value){
-      pls.value='';filterPayList();pls.focus();
-      pushGuard();
+    // ถ้าเพิ่งออกจาก entry ที่ push ตอนเริ่มพิมพ์ (searching) ให้ clear ช่องค้นหาแล้วอยู่หน้าเดิม
+    if(_plsSearchPushed){
+      _plsSearchPushed=false;
+      var pls=document.getElementById('pay-list-search');
+      if(pls){pls.value='';filterPayList();pls.focus();}
       return;
     }
+    // fallback เผื่อกรณี edge case ที่ flag ไม่ตรงกับค่าจริงในช่อง
+    var pls2=document.getElementById('pay-list-search');
+    if(pls2&&pls2.value){pls2.value='';filterPayList();pls2.focus();pushGuard();return;}
     closePayment();return;
   }
   if(ovIsOpen('ov-dash')){closeDash();showMainMenu();return;}
-  // ถ้าไม่มี modal — ถ้าช่องค้นหา card 1 มีข้อความ ให้ clear ก่อน ไม่ออกไป main menu เลย
+  // ถ้าไม่มี modal
   var mm=document.getElementById('main-menu');
   if(mm&&mm.classList.contains('hidden')){
-    var q=document.getElementById('q');
-    if(q&&q.value){
-      q.value='';doFilter();toggleClearBtn();q.focus();
-      pushGuard();
+    // ถ้าเพิ่งออกจาก entry ที่ push ตอนเริ่มพิมพ์ (searching) ให้ clear ช่องค้นหาแล้วอยู่หน้าเดิม (ไม่ไป main menu)
+    if(_qSearchPushed){
+      _qSearchPushed=false;
+      var q=document.getElementById('q');
+      if(q){q.value='';doFilter();toggleClearBtn();q.focus();}
       return;
     }
+    // fallback เผื่อกรณี edge case ที่ flag ไม่ตรงกับค่าจริงในช่อง
+    var q2=document.getElementById('q');
+    if(q2&&q2.value){q2.value='';doFilter();toggleClearBtn();q2.focus();pushGuard();return;}
     showMainMenu(); // showMainMenu() ทำ pushState({page:'menu'}) ไว้แล้ว — ไม่ต้อง push เพิ่ม
   } else {
     pushGuard();
@@ -2456,7 +2482,6 @@ window.addEventListener('popstate', function(e){
 });
 
 // push guard entries ตั้งต้นหลายชั้นตอนโหลดหน้า เพื่อไม่ให้ back หลุดออกไปนอกแอป (เช่นปิดแท็บ/PWA)
-// แม้ผู้ใช้จะกด back รัว ๆ ก็ยังมี buffer เหลือให้ popstate ของเราทำงานทันเสมอ
 window.addEventListener('load', function(){
   for(var i=0;i<15;i++) pushGuard();
 });
@@ -2566,6 +2591,7 @@ function mmGo(page){
   if(page==='list'){
     window.scrollTo({top:0,behavior:'instant'});
     history.pushState({page:'list'},'','');
+    _qSearchPushed=false;
   } else if(page==='dashboard'){
     history.pushState({page:'dashboard'},'','');
     openDash();
@@ -2645,6 +2671,7 @@ function openPayment(){
   if(ps)ps.value='';
   var pls=document.getElementById('pay-list-search');
   if(pls)pls.value='';
+  _plsSearchPushed=false;
   var psr=document.getElementById('pay-search-results');
   if(psr){psr.innerHTML='';psr.style.display='none';}
   paySearchSelIdx=-1;
@@ -3361,7 +3388,7 @@ document.addEventListener('keydown', function(e){
     if(ovIsOpen('ov-payment')){
       // ถ้าช่องค้นหามีข้อความอยู่ ให้ clear ก่อน รอพิมพ์ใหม่ได้เลย (เหมือน card 1)
       var pls=document.getElementById('pay-list-search');
-      if(pls&&pls.value){pls.value='';filterPayList();pls.focus();return;}
+      if(pls&&pls.value){pls.value='';filterPayList();pls.focus();_plsSearchPushed=false;return;}
       closePayment();return;
     }
   } else if(e.key==='F10'){
