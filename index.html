@@ -2417,6 +2417,9 @@ document.getElementById('ov-renew').addEventListener('click',function(e){if(e.ta
 
 
 // BACK BUTTON — ปิด modal แทนออกจากหน้า
+var _guardSeq=0;
+function pushGuard(){ history.pushState({guard:++_guardSeq},'',''); }
+
 window.addEventListener('popstate', function(e){
   // ปิด modal ที่เปิดอยู่ตามลำดับความสำคัญ
   if(ovIsOpen('ov-confirm')){cfNo();return;}
@@ -2431,9 +2434,7 @@ window.addEventListener('popstate', function(e){
     var pls=document.getElementById('pay-list-search');
     if(pls&&pls.value){
       pls.value='';filterPayList();pls.focus();
-      // push 2 ครั้ง เพื่อกันกรณี stack เหลือน้อยและ browser เริ่ม exit ก่อน pushState ทัน
-      history.pushState(null,'','');
-      history.pushState(null,'','');
+      pushGuard();
       return;
     }
     closePayment();return;
@@ -2445,20 +2446,19 @@ window.addEventListener('popstate', function(e){
     var q=document.getElementById('q');
     if(q&&q.value){
       q.value='';doFilter();toggleClearBtn();q.focus();
-      // push 2 ครั้ง เพื่อกันกรณี stack เหลือน้อยและ browser เริ่ม exit ก่อน pushState ทัน
-      history.pushState(null,'','');
-      history.pushState(null,'','');
+      pushGuard();
       return;
     }
     showMainMenu(); // showMainMenu() ทำ pushState({page:'menu'}) ไว้แล้ว — ไม่ต้อง push เพิ่ม
   } else {
-    history.pushState(null,'','');
+    pushGuard();
   }
 });
 
-// push state ตั้งต้น 1 ครั้งเพื่อให้มี history entry
+// push guard entries ตั้งต้นหลายชั้นตอนโหลดหน้า เพื่อไม่ให้ back หลุดออกไปนอกแอป (เช่นปิดแท็บ/PWA)
+// แม้ผู้ใช้จะกด back รัว ๆ ก็ยังมี buffer เหลือให้ popstate ของเราทำงานทันเสมอ
 window.addEventListener('load', function(){
-  history.pushState(null,'','');
+  for(var i=0;i<15;i++) pushGuard();
 });
 
 // LOGIN
