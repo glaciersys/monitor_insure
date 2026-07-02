@@ -3339,7 +3339,12 @@ document.addEventListener('keydown', function(e){
     e.stopImmediatePropagation();
     window._payEscHandled=true;
     if(ovIsOpen('ov-pay-form')){closePayForm();return;}
-    if(ovIsOpen('ov-payment')){closePayment();return;}
+    if(ovIsOpen('ov-payment')){
+      // ถ้าช่องค้นหามีข้อความอยู่ ให้ clear ก่อน รอพิมพ์ใหม่ได้เลย (เหมือน card 1)
+      var pls=document.getElementById('pay-list-search');
+      if(pls&&pls.value){pls.value='';filterPayList();pls.focus();return;}
+      closePayment();return;
+    }
   } else if(e.key==='F10'){
     if(ovIsOpen('ov-pay-form')){
       e.preventDefault();
