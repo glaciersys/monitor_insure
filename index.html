@@ -2431,7 +2431,8 @@ window.addEventListener('popstate', function(e){
     var pls=document.getElementById('pay-list-search');
     if(pls&&pls.value){
       pls.value='';filterPayList();pls.focus();
-      // push state คืนเพื่อให้ back ครั้งต่อไปยังอยู่ใน payment modal ก่อน ไม่ออกไปเลย
+      // push 2 ครั้ง เพื่อกันกรณี stack เหลือน้อยและ browser เริ่ม exit ก่อน pushState ทัน
+      history.pushState(null,'','');
       history.pushState(null,'','');
       return;
     }
@@ -2444,10 +2445,12 @@ window.addEventListener('popstate', function(e){
     var q=document.getElementById('q');
     if(q&&q.value){
       q.value='';doFilter();toggleClearBtn();q.focus();
+      // push 2 ครั้ง เพื่อกันกรณี stack เหลือน้อยและ browser เริ่ม exit ก่อน pushState ทัน
+      history.pushState(null,'','');
       history.pushState(null,'','');
       return;
     }
-    showMainMenu();
+    showMainMenu(); // showMainMenu() ทำ pushState({page:'menu'}) ไว้แล้ว — ไม่ต้อง push เพิ่ม
   } else {
     history.pushState(null,'','');
   }
