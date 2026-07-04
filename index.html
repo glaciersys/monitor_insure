@@ -1091,6 +1091,12 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
         <button class="btn btn-primary btn-sm" onclick="changePassword()">🔒 บันทึก</button>
       </div>
     </div>
+    <!-- ตรวจสอบวันที่ผิดปกติ -->
+    <div style="border-top:1px solid #e2e8f0;padding:12px 0 4px">
+      <div style="font-weight:600;color:#1a4f8a;font-size:12px;margin-bottom:8px">🔍 ตรวจสอบวันที่ผิดปกติ (เช่นจากบั๊กการต่ออายุ/แก้ประวัติ)</div>
+      <button class="btn btn-secondary btn-sm" onclick="scanBadDates()">🔍 เริ่มตรวจสอบ</button>
+      <div id="bad-date-results" style="margin-top:10px;font-size:12px"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeSettings()">ปิด</button>
     </div>
@@ -3967,8 +3973,72 @@ function kpiBox(icon,label,val,color){
 }
 
 // SETTINGS
-function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();ovShow('ov-settings');}
+function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();document.getElementById('bad-date-results').innerHTML='';ovShow('ov-settings');}
 function closeSettings(){ovHide('ov-settings');showMainMenu();}
+
+// ตรวจสอบวันที่ผิดปกติ — สแกนหาปีที่เกิน 2400 (แปลว่าถูกเก็บเป็น พ.ศ.ผิดพลาด แทนที่จะเป็น ค.ศ.)
+// เกิดได้จากบั๊กเก่าของหน้าต่ออายุประกัน/แก้ไขประวัติ ที่ยังไม่ได้แก้ (ดูวันที่ deploy)
+function _yearOfISO(s){
+  if(!s)return null;
+  var p=String(s).split('-');if(p.length!==3)return null;
+  var y=parseInt(p[0],10);return isNaN(y)?null:y;
+}
+function scanBadDates(){
+  var el=document.getElementById('bad-date-results');
+  el.innerHTML='กำลังตรวจสอบ...';
+  Promise.all([
+    db.collection('customers').get(),
+    db.collection('history').get()
+  ]).then(function(results){
+    var custSnap=results[0],histSnap=results[1];
+    var problems=[];
+    custSnap.forEach(function(doc){
+      var d=doc.data();
+      var ys=_yearOfISO(d.start),ye=_yearOfISO(d.end);
+      if((ys&&ys>2400)||(ye&&ye>2400)){
+        problems.push({col:'customers',id:doc.id,label:(d.name||d.firstname||'(ไม่มีชื่อ)')+' / '+(d.plate||'-'),start:d.start,end:d.end,ys:ys,ye:ye});
+      }
+    });
+    histSnap.forEach(function(doc){
+      var d=doc.data();
+      var ys=_yearOfISO(d.start),ye=_yearOfISO(d.end);
+      if((ys&&ys>2400)||(ye&&ye>2400)){
+        problems.push({col:'history',id:doc.id,label:(d.custName||'(ไม่มีชื่อ)')+' — ประวัติ ['+(d.insco||'-')+']',start:d.start,end:d.end,ys:ys,ye:ye});
+      }
+    });
+    if(problems.length===0){
+      el.innerHTML='<div style="color:#16a34a;padding:8px 0">✅ ไม่พบวันที่ผิดปกติ ข้อมูลปกติทั้งหมด</div>';
+      return;
+    }
+    el.innerHTML='<div style="color:#dc2626;font-weight:600;margin-bottom:6px">⚠️ พบ '+problems.length+' รายการที่วันที่ผิดปกติ (ปีเกิน 2400)</div>'
+      +'<div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px">'
+      +problems.map(function(p,i){
+        return '<div style="padding:6px 8px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;gap:8px">'
+          +'<div><div style="font-weight:500">'+esc(p.label)+'</div>'
+          +'<div style="color:#94a3b8">เริ่ม: '+esc(p.start||'-')+(p.ys&&p.ys>2400?' ⚠️':'')+' &nbsp;สิ้นสุด: '+esc(p.end||'-')+(p.ye&&p.ye>2400?' ⚠️':'')+'</div></div>'
+          +'<button class="btn btn-primary btn-sm" onclick="fixBadDate('+i+')">🔧 แก้ไข</button>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+    window._badDateProblems=problems;
+  }).catch(function(e){
+    el.innerHTML='<div style="color:#dc2626">เกิดข้อผิดพลาด: '+esc(e.message)+'</div>';
+  });
+}
+function fixBadDate(i){
+  var p=window._badDateProblems&&window._badDateProblems[i];if(!p)return;
+  var newStart=p.ys&&p.ys>2400?normGregISO(p.start):p.start;
+  var newEnd=p.ye&&p.ye>2400?normGregISO(p.end):p.end;
+  if(!confirm('ยืนยันแก้ไขวันที่ของ "'+p.label+'"\n\nเดิม: '+(p.start||'-')+' ถึง '+(p.end||'-')+'\nแก้เป็น: '+newStart+' ถึง '+newEnd+'\n\n(ลบ 543 ปีออกจากปีที่ผิดปกติ)'))return;
+  db.collection(p.col).doc(p.id).update({start:newStart,end:newEnd}).then(function(){
+    toast('✅ แก้ไขแล้ว');
+    if(p.col==='customers'){
+      var ci=customers.findIndex(function(x){return x.id===p.id;});
+      if(ci>=0){customers[ci].start=newStart;customers[ci].end=newEnd;doFilter();}
+    }
+    scanBadDates();
+  }).catch(function(e){toast(e.message,'error');});
+}
 function renderSlPx(){document.getElementById('sl-px').innerHTML=sortArr(prefixes).map(function(p){return '<div class="settings-item"><span>'+esc(p)+'</span><button class="btn btn-sm btn-danger" onclick="slDel(\'px\',\''+esc(p)+'\')">✕</button></div>';}).join('')||'<div style="font-size:10px;color:#94a3b8">ยังไม่มี</div>';}
 function renderSlType(){document.getElementById('sl-type').innerHTML=sortArr(insTypes).map(function(t){return '<div class="settings-item"><span>'+esc(t)+'</span><button class="btn btn-sm btn-danger" onclick="slDel(\'type\',\''+esc(t)+'\')">✕</button></div>';}).join('')||'<div style="font-size:10px;color:#94a3b8">ยังไม่มี</div>';}
 function renderSlCo(){document.getElementById('sl-co').innerHTML=sortArr(insCos).map(function(c){return '<div class="settings-item"><span>'+esc(c)+'</span><button class="btn btn-sm btn-danger" onclick="slDel(\'co\',\''+esc(c)+'\')">✕</button></div>';}).join('')||'<div style="font-size:10px;color:#94a3b8">ยังไม่มี</div>';}
