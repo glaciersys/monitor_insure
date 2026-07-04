@@ -1213,6 +1213,15 @@ function fmtDateInput(el){
   if(v.length===10) el.dispatchEvent(new Event('change',{bubbles:true}));
 }
 // แปลง DD/MM/YYYY(BE) → YYYY-MM-DD(CE) สำหรับเก็บข้อมูล
+// รับค่า YYYY-MM-DD (จาก native date input) แล้วการันตีว่าปีที่คืนเป็น ค.ศ.จริงเสมอ
+// กันกรณี browser/OS บางเครื่อง native date input คืนปีมาเป็น พ.ศ.อยู่แล้ว (ปี > 2400) ไม่ให้ไปเก็บผิดเป็นปีอนาคตหลายร้อยปี
+function normGregISO(val){
+  if(!val)return '';
+  var p=val.split('-');if(p.length!==3)return val;
+  var y=parseInt(p[0],10);if(isNaN(y))return val;
+  var ce=(y>2400)?(y-543):y;
+  return ce+'-'+p[1]+'-'+p[2];
+}
 function beToISO(val){
   if(!val)return '';
   if(val.indexOf('-')!==-1)return val; // ISO already
@@ -1237,7 +1246,9 @@ function showYD(inputId,dispId){
   if(!val){el.textContent='';return;}
   var iso=beToISO(val);
   if(!iso){el.textContent='';return;}
-  var p=iso.split('-');var be=parseInt(p[0],10)+543;
+  var p=iso.split('-');var y=parseInt(p[0],10);
+  // กันการบวก พ.ศ. ซ้ำสอง — ถ้าปีที่ได้เกิน 2400 แปลว่าเป็น พ.ศ. อยู่แล้ว ไม่ต้องบวกซ้ำ (เหมือน fmtDate)
+  var be=(y>2400)?y:y+543;
   el.textContent=p[2]+'/'+p[1]+'/'+String(be).slice(-2)+' (พ.ศ.'+be+')';
 }
 function autoCalcStatus(){
@@ -2276,7 +2287,7 @@ function saveHist(){
   if(!insco){toast('กรุณาเลือกบริษัทประกัน','error');return;}
   if(!pr){toast('กรุณากรอกเบี้ยประกัน','error');return;}
   var c=customers.find(function(x){return x.id===detailId;});if(!c)return;
-  var data={custId:c.id,custName:fullName(c),insco:insco,type:document.getElementById('hty').value,coverage:getNum('hcv'),premium:pr,start:document.getElementById('hsd').value,end:document.getElementById('hed').value,note:document.getElementById('hno').value};
+  var data={custId:c.id,custName:fullName(c),insco:insco,type:document.getElementById('hty').value,coverage:getNum('hcv'),premium:pr,start:normGregISO(document.getElementById('hsd').value),end:normGregISO(document.getElementById('hed').value),note:document.getElementById('hno').value};
   var hOp = editHistIdx!==null ? fsUpdateHistory(Object.assign({},data,{_docId:histData[editHistIdx]&&histData[editHistIdx]._docId})) : fsAddHistory(data);
   hOp.then(function(){cancelHistForm();loadHist(detailId);toast(editHistIdx!==null?'✅ แก้ไขประวัติแล้ว':'✅ เพิ่มประวัติแล้ว');
   }).catch(function(e){toast(e.message,'error');});
@@ -2388,7 +2399,7 @@ function saveRenew(){
   var co=document.getElementById('rco').value;
   var ty=document.getElementById('rty').value;
   var pr=getNum('rpr');var cv=getNum('rcv');
-  var sd=document.getElementById('rsd').value;var ed=document.getElementById('red').value;
+  var sd=normGregISO(document.getElementById('rsd').value);var ed=normGregISO(document.getElementById('red').value);
   if(!co){toast('กรุณาเลือกบริษัทประกัน','error');return;}
   if(!ty){toast('กรุณาเลือกประเภทประกัน','error');return;}
   if(!pr){toast('กรุณากรอกเบี้ยประกัน','error');return;}
