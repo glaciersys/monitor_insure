@@ -4011,6 +4011,7 @@ function scanBadDates(){
       return;
     }
     el.innerHTML='<div style="color:#dc2626;font-weight:600;margin-bottom:6px">⚠️ พบ '+problems.length+' รายการที่วันที่ผิดปกติ (ปีเกิน 2400)</div>'
+      +'<div style="margin-bottom:8px"><button class="btn btn-primary btn-sm" onclick="fixAllBadDates()">🔧 แก้ไขทั้งหมด ('+problems.length+' รายการ)</button></div>'
       +'<div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px">'
       +problems.map(function(p,i){
         return '<div style="padding:6px 8px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;gap:8px">'
@@ -4038,6 +4039,43 @@ function fixBadDate(i){
     }
     scanBadDates();
   }).catch(function(e){toast(e.message,'error');});
+}
+function fixAllBadDates(){
+  var problems=window._badDateProblems||[];
+  if(problems.length===0)return;
+  if(!confirm('ยืนยันแก้ไขทั้งหมด '+problems.length+' รายการ?\n\nเป็นการปรับรูปแบบการเก็บวันที่ให้เป็นมาตรฐานเดียวกัน (ค.ศ.แท้) เท่านั้น — หน้าจอที่แสดงผล (พ.ศ.) จะเหมือนเดิมทุกอย่าง ไม่เปลี่ยนแปลง\n\nขั้นตอนนี้ไม่สามารถ Undo ได้ กรุณาตรวจสอบให้แน่ใจก่อนดำเนินการ'))return;
+  var el=document.getElementById('bad-date-results');
+  el.innerHTML='กำลังแก้ไข 0/'+problems.length+' รายการ...';
+  var done=0,failed=0;
+  function next(i){
+    if(i>=problems.length){
+      el.innerHTML='<div style="color:#16a34a;padding:8px 0">✅ แก้ไขเสร็จแล้ว '+done+' รายการ'+(failed?(' (ผิดพลาด '+failed+' รายการ)'):'')+'</div>';
+      toast('✅ แก้ไขวันที่เสร็จแล้ว '+done+' รายการ');
+      // sync ข้อมูลลูกค้าใน memory ให้ตรงกับที่แก้ไปแล้ว
+      problems.forEach(function(p){
+        if(p.col==='customers'){
+          var ci=customers.findIndex(function(x){return x.id===p.id;});
+          if(ci>=0){
+            if(p.ys&&p.ys>2400)customers[ci].start=normGregISO(p.start);
+            if(p.ye&&p.ye>2400)customers[ci].end=normGregISO(p.end);
+          }
+        }
+      });
+      doFilter();
+      return;
+    }
+    var p=problems[i];
+    var newStart=p.ys&&p.ys>2400?normGregISO(p.start):p.start;
+    var newEnd=p.ye&&p.ye>2400?normGregISO(p.end):p.end;
+    db.collection(p.col).doc(p.id).update({start:newStart,end:newEnd}).then(function(){
+      done++;el.innerHTML='กำลังแก้ไข '+(i+1)+'/'+problems.length+' รายการ...';
+      next(i+1);
+    }).catch(function(e){
+      failed++;console.warn('fix failed for',p.id,e.message);
+      next(i+1);
+    });
+  }
+  next(0);
 }
 function renderSlPx(){document.getElementById('sl-px').innerHTML=sortArr(prefixes).map(function(p){return '<div class="settings-item"><span>'+esc(p)+'</span><button class="btn btn-sm btn-danger" onclick="slDel(\'px\',\''+esc(p)+'\')">✕</button></div>';}).join('')||'<div style="font-size:10px;color:#94a3b8">ยังไม่มี</div>';}
 function renderSlType(){document.getElementById('sl-type').innerHTML=sortArr(insTypes).map(function(t){return '<div class="settings-item"><span>'+esc(t)+'</span><button class="btn btn-sm btn-danger" onclick="slDel(\'type\',\''+esc(t)+'\')">✕</button></div>';}).join('')||'<div style="font-size:10px;color:#94a3b8">ยังไม่มี</div>';}
