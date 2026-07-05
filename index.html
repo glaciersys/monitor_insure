@@ -2705,6 +2705,14 @@ function _lastPayDate(p){
   }
   return p.payDate||'';
 }
+function _lastPayAmount(p){
+  if(p.payRows&&p.payRows.length){
+    for(var ri=p.payRows.length-1;ri>=0;ri--){
+      if(p.payRows[ri].date&&p.payRows[ri].amount>0)return p.payRows[ri].amount;
+    }
+  }
+  return p.paidAmount||0;
+}
 // เรียง allPaymentsFiltered ตามโหมดปัจจุบัน (เรียกซ้ำได้ทุกครั้งหลังกรอง/โหลดข้อมูลใหม่)
 function applyPaySortMode(){
   if(payListSortMode==='date'){
@@ -3157,7 +3165,9 @@ function renderPayList(){
       +(p.payRows&&p.payRows.length>=1?'<span style="background:#e0f2fe;color:#0369a1;border-radius:4px;padding:1px 5px;font-size:11px;margin-right:4px">'+p.payRows.length+' งวด</span>':'')
       +(function(){
         var d=_lastPayDate(p);
-        return d?fmtDate(d):'-';
+        if(!d)return '-';
+        var amt=_lastPayAmount(p);
+        return fmtDate(d)+' = '+fmtNum(amt);
       })()+'</td>'
       +'<td style="padding:5px 12px;font-size:12px;text-align:right">'+fmtNum(p.totalAmount)+'</td>'
       +'<td style="padding:5px 12px;font-size:12px;text-align:right;color:#16a34a;font-weight:500">'+fmtNum(p.paidAmount)+'</td>'
