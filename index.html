@@ -1091,6 +1091,18 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
         <button class="btn btn-primary btn-sm" onclick="changePassword()">🔒 บันทึก</button>
       </div>
     </div>
+    <!-- สำรองข้อมูล/กู้คืนข้อมูล -->
+    <div style="border-top:1px solid #e2e8f0;padding:12px 0 4px">
+      <div style="font-weight:600;color:#1a4f8a;font-size:12px;margin-bottom:8px">💾 สำรองข้อมูล / กู้คืนข้อมูล</div>
+      <div style="color:#64748b;font-size:11px;margin-bottom:8px">สำรองข้อมูลลูกค้า, ประวัติกรมธรรม์, และรายการรับชำระทั้งหมดเป็นไฟล์ .json เก็บไว้ในเครื่อง</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-secondary btn-sm" onclick="exportBackup()">📥 ดาวน์โหลดข้อมูลสำรอง</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restore-file-input').click()">📤 กู้คืนจากไฟล์สำรอง</button>
+        <input type="file" id="restore-file-input" accept="application/json,.json" style="display:none" onchange="handleRestoreFile(event)">
+      </div>
+      <div id="backup-status" style="margin-top:8px;font-size:12px"></div>
+      <div id="restore-preview" style="margin-top:8px;font-size:12px"></div>
+    </div>
     <!-- ตรวจสอบวันที่ผิดปกติ -->
     <div style="border-top:1px solid #e2e8f0;padding:12px 0 4px">
       <div style="font-weight:600;color:#1a4f8a;font-size:12px;margin-bottom:8px">🔍 ตรวจสอบวันที่ผิดปกติ (เช่นจากบั๊กการต่ออายุ/แก้ประวัติ)</div>
@@ -3977,7 +3989,116 @@ function kpiBox(icon,label,val,color){
 }
 
 // SETTINGS
-function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();document.getElementById('bad-date-results').innerHTML='';ovShow('ov-settings');}
+// ====== สำรองข้อมูล / กู้คืนข้อมูล ======
+function exportBackup(){
+  var st=document.getElementById('backup-status');
+  st.innerHTML='กำลังเตรียมไฟล์สำรอง...';
+  Promise.all([
+    db.collection('customers').get(),
+    db.collection('history').get(),
+    db.collection('payments').get(),
+    db.collection('settings').doc('main').get()
+  ]).then(function(results){
+    var custSnap=results[0],histSnap=results[1],paySnap=results[2],setSnap=results[3];
+    var backup={
+      _type:'monitor-insure-backup',
+      version:1,
+      exportedAt:new Date().toISOString(),
+      customers:custSnap.docs.map(function(d){return Object.assign({_id:d.id},d.data());}),
+      history:histSnap.docs.map(function(d){return Object.assign({_id:d.id},d.data());}),
+      payments:paySnap.docs.map(function(d){return Object.assign({_id:d.id},d.data());}),
+      settingsMain:setSnap.exists?setSnap.data():null
+      // หมายเหตุ: ไม่รวม settings/auth (รหัสผ่าน) ในไฟล์สำรอง เพื่อความปลอดภัย
+    };
+    var blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    var ts=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.href=url;a.download='monitor-insure-backup-'+ts+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    st.innerHTML='<div style="color:#16a34a">✅ ดาวน์โหลดไฟล์สำรองแล้ว — ลูกค้า '+backup.customers.length+' ราย, ประวัติ '+backup.history.length+' รายการ, การรับชำระ '+backup.payments.length+' รายการ</div>';
+  }).catch(function(e){
+    st.innerHTML='<div style="color:#dc2626">เกิดข้อผิดพลาด: '+esc(e.message)+'</div>';
+  });
+}
+
+function handleRestoreFile(ev){
+  var file=ev.target.files&&ev.target.files[0];if(!file)return;
+  var pv=document.getElementById('restore-preview');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var data;
+    try{data=JSON.parse(e.target.result);}catch(err){
+      pv.innerHTML='<div style="color:#dc2626">ไฟล์นี้ไม่ใช่ไฟล์ JSON ที่ถูกต้อง</div>';
+      ev.target.value='';return;
+    }
+    if(!data||data._type!=='monitor-insure-backup'){
+      pv.innerHTML='<div style="color:#dc2626">ไฟล์นี้ไม่ใช่ไฟล์สำรองของระบบนี้ (ไม่พบ _type ที่ถูกต้อง)</div>';
+      ev.target.value='';return;
+    }
+    window._pendingRestore=data;
+    pv.innerHTML='<div style="border:1px solid #fbbf24;background:#fffbeb;border-radius:6px;padding:10px">'
+      +'<div style="font-weight:600;margin-bottom:4px">📄 พบไฟล์สำรอง</div>'
+      +'<div style="color:#64748b;margin-bottom:2px">วันที่สำรอง: '+esc(new Date(data.exportedAt).toLocaleString('th-TH'))+'</div>'
+      +'<div style="color:#64748b;margin-bottom:8px">ลูกค้า '+(data.customers||[]).length+' ราย / ประวัติ '+(data.history||[]).length+' รายการ / การรับชำระ '+(data.payments||[]).length+' รายการ</div>'
+      +'<button class="btn btn-primary btn-sm" onclick="confirmRestore()">⚠️ ยืนยันกู้คืนข้อมูลนี้</button> '
+      +'<button class="btn btn-secondary btn-sm" onclick="cancelRestore()">ยกเลิก</button>'
+      +'</div>';
+  };
+  reader.readAsText(file,'utf-8');
+}
+function cancelRestore(){
+  window._pendingRestore=null;
+  document.getElementById('restore-preview').innerHTML='';
+  document.getElementById('restore-file-input').value='';
+}
+function confirmRestore(){
+  var data=window._pendingRestore;if(!data)return;
+  var msg='ยืนยันกู้คืนข้อมูลจากไฟล์สำรองวันที่ '+new Date(data.exportedAt).toLocaleString('th-TH')+' ?\n\n'
+    +'- จะปรับข้อมูลลูกค้า/ประวัติ/การรับชำระ ที่ตรงกับรายการในไฟล์ ให้กลับไปเป็นค่าตามไฟล์สำรอง\n'
+    +'- รายการที่เพิ่มขึ้นใหม่ "หลังจาก" วันที่สำรองนี้ จะไม่ถูกลบออก (กู้คืนแบบ merge ไม่ใช่ล้างข้อมูลทั้งหมดก่อน)\n\n'
+    +'ขั้นตอนนี้ไม่สามารถ Undo ได้ กรุณาตรวจสอบให้แน่ใจก่อนดำเนินการ';
+  if(!confirm(msg))return;
+  runRestore(data);
+}
+function runRestore(data){
+  var pv=document.getElementById('restore-preview');
+  var items=[];
+  (data.customers||[]).forEach(function(c){items.push({col:'customers',id:c._id,data:c});});
+  (data.history||[]).forEach(function(h){items.push({col:'history',id:h._id,data:h});});
+  (data.payments||[]).forEach(function(p){items.push({col:'payments',id:p._id,data:p});});
+  var total=items.length,done=0,failed=0;
+  pv.innerHTML='กำลังกู้คืน 0/'+total+' รายการ...';
+  function cleanForFirestore(obj){
+    var o=Object.assign({},obj);delete o._id;return o;
+  }
+  function next(i){
+    if(i>=total){
+      var extra=(data.settingsMain)?db.collection('settings').doc('main').set(data.settingsMain,{merge:true}):Promise.resolve();
+      extra.then(function(){
+        pv.innerHTML='<div style="color:#16a34a">✅ กู้คืนข้อมูลเสร็จแล้ว '+done+' รายการ'+(failed?(' (ผิดพลาด '+failed+' รายการ)'):'')+'</div>';
+        toast('✅ กู้คืนข้อมูลเสร็จแล้ว');
+        window._pendingRestore=null;
+        document.getElementById('restore-file-input').value='';
+        fsBoot(); // โหลดข้อมูลใหม่ทั้งหมดเข้าหน้าจอ
+      });
+      return;
+    }
+    var it=items[i];
+    if(!it.id){failed++;next(i+1);return;}
+    db.collection(it.col).doc(it.id).set(cleanForFirestore(it.data)).then(function(){
+      done++;pv.innerHTML='กำลังกู้คืน '+(i+1)+'/'+total+' รายการ...';
+      next(i+1);
+    }).catch(function(e){
+      failed++;console.warn('restore failed for',it.col,it.id,e.message);
+      next(i+1);
+    });
+  }
+  next(0);
+}
+
+function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();document.getElementById('bad-date-results').innerHTML='';document.getElementById('backup-status').innerHTML='';document.getElementById('restore-preview').innerHTML='';ovShow('ov-settings');}
 function closeSettings(){ovHide('ov-settings');showMainMenu();}
 
 // ตรวจสอบวันที่ผิดปกติ — สแกนหาปีที่เกิน 2400 (แปลว่าถูกเก็บเป็น พ.ศ.ผิดพลาด แทนที่จะเป็น ค.ศ.)
