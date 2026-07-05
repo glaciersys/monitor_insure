@@ -805,10 +805,12 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
     </div>
 
     <!-- ส่วนค้นหา -->
-    <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#fff;flex-shrink:0">
+    <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#fff;flex-shrink:0;display:flex;gap:8px;align-items:center">
       <input type="text" id="pay-list-search" placeholder="🔍 ค้นหาชื่อ, ทะเบียน..."
-        style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box"
+        style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box"
         oninput="plsOnInput()" oncompositionend="plsOnInput()">
+      <button id="pay-sort-btn" onclick="togglePaySortMode()" title="สลับการเรียงลำดับ (F2)"
+        style="white-space:nowrap;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer;color:#334155">↕️ เรียงตามชื่อ</button>
     </div>
 
     <!-- รายการ -->
@@ -2691,6 +2693,40 @@ function fmtPayFocus(el){
 var paySelectedCust=null;
 var allPayments=[];
 var allPaymentsFiltered=[];
+// โหมดเรียงลำดับรายการรับชำระเบี้ย: 'name' = เรียงตามชื่อลูกค้า (ปกติ), 'date' = เรียงตามวันที่รับชำระล่าสุด (ใหม่ไปเก่า)
+var payListSortMode='name';
+
+// หาวันที่งวดล่าสุดที่มีข้อมูลจริงของรายการรับชำระ 1 รายการ (ใช้ทั้งแสดงผลและเรียงลำดับ)
+function _lastPayDate(p){
+  if(p.payRows&&p.payRows.length){
+    for(var ri=p.payRows.length-1;ri>=0;ri--){
+      if(p.payRows[ri].date&&p.payRows[ri].amount>0)return p.payRows[ri].date;
+    }
+  }
+  return p.payDate||'';
+}
+// เรียง allPaymentsFiltered ตามโหมดปัจจุบัน (เรียกซ้ำได้ทุกครั้งหลังกรอง/โหลดข้อมูลใหม่)
+function applyPaySortMode(){
+  if(payListSortMode==='date'){
+    allPaymentsFiltered.sort(function(a,b){
+      var da=_lastPayDate(a),db=_lastPayDate(b);
+      if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1; // ไม่มีวันที่ไว้ท้ายสุด
+      return db.localeCompare(da); // ใหม่ไปเก่า
+    });
+  } else {
+    allPaymentsFiltered.sort(function(a,b){
+      return stripPrefix(a.custName).localeCompare(stripPrefix(b.custName),'th');
+    });
+  }
+}
+function togglePaySortMode(){
+  payListSortMode=(payListSortMode==='name')?'date':'name';
+  var btn=document.getElementById('pay-sort-btn');
+  if(btn)btn.textContent=(payListSortMode==='date')?'↕️ เรียงตามวันที่ล่าสุด':'↕️ เรียงตามชื่อ';
+  applyPaySortMode();
+  paySelIdx=-1;
+  renderPayList();
+}
 var paySelIdx=-1;
 var paySearchSelIdx=-1;
 var paySelMode='';
@@ -2708,6 +2744,9 @@ function openPayment(){
   var psr=document.getElementById('pay-search-results');
   if(psr){psr.innerHTML='';psr.style.display='none';}
   paySearchSelIdx=-1;
+  payListSortMode='name';
+  var sortBtn=document.getElementById('pay-sort-btn');
+  if(sortBtn)sortBtn.textContent='↕️ เรียงตามชื่อ';
   ovShow('ov-payment');
   loadAllPayments();
   // ไม่ auto-focus ช่องค้นหา — ถ้าจะค้นหาให้ click หรือกด Space เอง
@@ -3065,11 +3104,8 @@ function loadAllPayments(){
   db.collection('payments').orderBy('createdAt','desc').limit(200).get().then(function(snap){
     allPayments=[];
     snap.forEach(function(doc){allPayments.push(Object.assign({id:doc.id},doc.data()));});
-    // เรียงตามชื่อลูกค้า (ตัด prefix ออกก่อนเรียง เพื่อให้เรียง ก-ฮ ตามชื่อจริง)
-    allPayments.sort(function(a,b){
-      return stripPrefix(a.custName).localeCompare(stripPrefix(b.custName),'th');
-    });
     allPaymentsFiltered=allPayments.slice();
+    applyPaySortMode();
     renderPayList();
   }).catch(function(e){
     tbody.innerHTML='<tr><td colspan="8" style="padding:12px;text-align:center;font-size:12px;color:#ef4444">โหลดไม่สำเร็จ</td></tr>';
@@ -3081,6 +3117,7 @@ function filterPayList(){
   allPaymentsFiltered=!q?allPayments.slice():allPayments.filter(function(p){
     return (p.custName||'').toLowerCase().includes(q)||(p.plate||'').toLowerCase().includes(q);
   });
+  applyPaySortMode();
   paySelIdx=-1;
   renderPayList();
 }
@@ -3119,15 +3156,8 @@ function renderPayList(){
       +'<td style="padding:5px 12px;font-size:12px">'
       +(p.payRows&&p.payRows.length>=1?'<span style="background:#e0f2fe;color:#0369a1;border-radius:4px;padding:1px 5px;font-size:11px;margin-right:4px">'+p.payRows.length+' งวด</span>':'')
       +(function(){
-        // หาวันที่งวดล่าสุด (payRows ตัวสุดท้ายที่มีข้อมูล)
-        if(p.payRows&&p.payRows.length){
-          var lastRow=null;
-          for(var ri=p.payRows.length-1;ri>=0;ri--){
-            if(p.payRows[ri].date&&p.payRows[ri].amount>0){lastRow=p.payRows[ri];break;}
-          }
-          if(lastRow)return fmtDate(lastRow.date);
-        }
-        return fmtDate(p.payDate);
+        var d=_lastPayDate(p);
+        return d?fmtDate(d):'-';
       })()+'</td>'
       +'<td style="padding:5px 12px;font-size:12px;text-align:right">'+fmtNum(p.totalAmount)+'</td>'
       +'<td style="padding:5px 12px;font-size:12px;text-align:right;color:#16a34a;font-weight:500">'+fmtNum(p.paidAmount)+'</td>'
@@ -3437,6 +3467,13 @@ document.addEventListener('keydown', function(e){
       e.stopPropagation();
       e.stopImmediatePropagation();
       payNewForm();return;
+    }
+  } else if(e.key==='F2'){
+    if(ovIsOpen('ov-payment')&&!ovIsOpen('ov-pay-form')){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      togglePaySortMode();return;
     }
   } else if(!ovIsOpen('ov-pay-form')&&!ovIsOpen('ov-payment')){
     return; // ปล่อยผ่านถ้าไม่ใช่ key ที่สนใจ
