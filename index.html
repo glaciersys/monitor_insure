@@ -2430,7 +2430,7 @@ function saveRenew(){
   if(!sd||!ed){toast('กรุณาระบุวันเริ่มต้น-สิ้นสุด','error');return;}
   var btn=document.getElementById('renew-save-btn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
   // ข้อมูลประวัติ (กรมธรรม์เดิม)
-  var histData_new={custId:c.id,custName:fullName(c),insco:c.insco||'',type:c.type||'',coverage:c.coverage||0,premium:c.premium||0,start:c.start||'',end:c.end||'',note:'[ต่ออายุ] '+new Date().toLocaleDateString('th-TH')};
+  var histData_new={custId:c.id,custName:fullName(c),insco:c.insco||'',type:c.type||'',coverage:c.coverage||0,premium:c.premium||0,start:c.start||'',end:c.end||'',note:'[ต่ออายุ] '+new Date().toLocaleDateString('th-TH')+(c.end?' (สิ้นสุด '+fmtDate(c.end)+')':'')};
   // ข้อมูลลูกค้าใหม่
   var st=document.getElementById('rst').value;
   var newData={id:c.id,insco:co,type:ty,premium:pr,coverage:cv,start:sd,end:ed,status:st,note:document.getElementById('rno').value.trim()};
