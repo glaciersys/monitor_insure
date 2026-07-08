@@ -1111,6 +1111,13 @@ tr[data-id]:hover td,tr[data-id].row-hover td{background:#f0f7ff}
       <button class="btn btn-secondary btn-sm" onclick="scanBadDates()">🔍 เริ่มตรวจสอบ</button>
       <div id="bad-date-results" style="margin-top:10px;font-size:12px"></div>
     </div>
+    <!-- เพิ่มวันที่สิ้นสุดในหมายเหตุประวัติเก่า -->
+    <div style="border-top:1px solid #e2e8f0;padding:12px 0 4px">
+      <div style="font-weight:600;color:#1a4f8a;font-size:12px;margin-bottom:8px">📝 เพิ่มวันที่สิ้นสุดในหมายเหตุประวัติเก่า (ต่ออายุ)</div>
+      <div style="color:#64748b;font-size:11px;margin-bottom:8px">ปรับหมายเหตุประวัติที่เกิดจากการ "ต่ออายุ" ก่อนหน้านี้ ให้มีวันที่สิ้นสุดต่อท้ายเหมือนรายการใหม่</div>
+      <button class="btn btn-secondary btn-sm" onclick="scanOldRenewNotes()">🔍 เริ่มตรวจสอบ</button>
+      <div id="old-note-results" style="margin-top:10px;font-size:12px"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeSettings()">ปิด</button>
     </div>
@@ -4145,8 +4152,64 @@ function runRestore(data){
   next(0);
 }
 
-function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();document.getElementById('bad-date-results').innerHTML='';document.getElementById('backup-status').innerHTML='';document.getElementById('restore-preview').innerHTML='';ovShow('ov-settings');}
+function openSettings(){hideMainMenu();fillSelects();renderSlPx();renderSlType();renderSlCo();renderSlBr();renderSlModel();document.getElementById('bad-date-results').innerHTML='';document.getElementById('backup-status').innerHTML='';document.getElementById('restore-preview').innerHTML='';document.getElementById('old-note-results').innerHTML='';ovShow('ov-settings');}
 function closeSettings(){ovHide('ov-settings');showMainMenu();}
+
+// ปรับหมายเหตุประวัติเก่าที่มาจากการต่ออายุ ให้มีวันที่สิ้นสุดต่อท้ายเหมือนรายการใหม่
+// เงื่อนไข: note ขึ้นต้นด้วย "[ต่ออายุ]" และยังไม่มี "(สิ้นสุด" ต่อท้าย (กันไม่ให้เพิ่มซ้ำถ้ารันซ้ำ) และมี end date ให้ใช้
+function scanOldRenewNotes(){
+  var el=document.getElementById('old-note-results');
+  el.innerHTML='กำลังตรวจสอบ...';
+  db.collection('history').get().then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.note&&d.note.indexOf('[ต่ออายุ]')===0&&d.note.indexOf('(สิ้นสุด')===-1&&d.end){
+        items.push({id:doc.id,custName:d.custName||'(ไม่มีชื่อ)',oldNote:d.note,newNote:d.note+' (สิ้นสุด '+fmtDate(d.end)+')'});
+      }
+    });
+    if(items.length===0){
+      el.innerHTML='<div style="color:#16a34a;padding:8px 0">✅ ไม่พบรายการที่ต้องปรับ (ครบแล้วหรือไม่มีประวัติต่ออายุแบบเก่า)</div>';
+      return;
+    }
+    window._oldNoteItems=items;
+    el.innerHTML='<div style="color:#dc2626;font-weight:600;margin-bottom:6px">พบ '+items.length+' รายการที่ยังไม่มีวันที่สิ้นสุดในหมายเหตุ</div>'
+      +'<div style="margin-bottom:8px"><button class="btn btn-primary btn-sm" onclick="fixAllOldNotes()">🔧 แก้ไขทั้งหมด ('+items.length+' รายการ)</button></div>'
+      +'<div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px">'
+      +items.map(function(it,i){
+        return '<div style="padding:6px 8px;border-bottom:1px solid #f1f5f9">'
+          +'<div style="font-weight:500">'+esc(it.custName)+'</div>'
+          +'<div style="color:#94a3b8">เดิม: '+esc(it.oldNote)+'</div>'
+          +'<div style="color:#16a34a">ใหม่: '+esc(it.newNote)+'</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }).catch(function(e){el.innerHTML='<div style="color:#dc2626">เกิดข้อผิดพลาด: '+esc(e.message)+'</div>';});
+}
+function fixAllOldNotes(){
+  var items=window._oldNoteItems||[];
+  if(items.length===0)return;
+  if(!confirm('ยืนยันปรับหมายเหตุทั้งหมด '+items.length+' รายการ?\n\nจะเพิ่มวันที่สิ้นสุดต่อท้ายข้อความหมายเหตุเดิม ไม่ลบ/เปลี่ยนแปลงข้อมูลอื่นใด\n\nขั้นตอนนี้ไม่สามารถ Undo ได้'))return;
+  var el=document.getElementById('old-note-results');
+  el.innerHTML='กำลังแก้ไข 0/'+items.length+' รายการ...';
+  var done=0,failed=0;
+  function next(i){
+    if(i>=items.length){
+      el.innerHTML='<div style="color:#16a34a;padding:8px 0">✅ แก้ไขเสร็จแล้ว '+done+' รายการ'+(failed?(' (ผิดพลาด '+failed+' รายการ)'):'')+'</div>';
+      toast('✅ ปรับหมายเหตุเสร็จแล้ว '+done+' รายการ');
+      return;
+    }
+    var it=items[i];
+    db.collection('history').doc(it.id).update({note:it.newNote}).then(function(){
+      done++;el.innerHTML='กำลังแก้ไข '+(i+1)+'/'+items.length+' รายการ...';
+      next(i+1);
+    }).catch(function(e){
+      failed++;console.warn('fix note failed for',it.id,e.message);
+      next(i+1);
+    });
+  }
+  next(0);
+}
 
 // ตรวจสอบวันที่ผิดปกติ — สแกนหาปีที่เกิน 2400 (แปลว่าถูกเก็บเป็น พ.ศ.ผิดพลาด แทนที่จะเป็น ค.ศ.)
 // เกิดได้จากบั๊กเก่าของหน้าต่ออายุประกัน/แก้ไขประวัติ ที่ยังไม่ได้แก้ (ดูวันที่ deploy)
