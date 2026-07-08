@@ -3890,7 +3890,7 @@ function printPaymentReport(){
           rows.push({
             date:row.date,installNo:idx+1,custName:p.custName||'-',
             plate:p.plate||'-',car:p.car||'-',amount:row.amount,
-            balance:p.balance||0
+            balance:p.balance||0,total:p.totalAmount||0
           });
         }
       });
@@ -3902,13 +3902,10 @@ function printPaymentReport(){
       return;
     }
     // วันที่ซ้ำกับแถวก่อนหน้า ให้แสดงวันที่แค่แถวแรกของกลุ่มนั้น แถวถัดไปเว้นว่างไว้ (ลดความรกของตาราง)
-    // และคำนวณ "ยอดรวม" เป็นยอดสะสม (running total) ของยอดชำระ ไล่ตามลำดับวันที่ แทนยอดรวมกรมธรรม์ที่ซ้ำกันทุกแถว
-    var prevDate=null,running=0;
+    var prevDate=null;
     rows.forEach(function(r){
       r.showDate=(r.date!==prevDate);
       prevDate=r.date;
-      running+=Number(r.amount||0);
-      r.runningTotal=running;
     });
     st.textContent='พบ '+rows.length+' รายการ กำลังเปิดหน้าพิมพ์...';
 
@@ -3922,7 +3919,7 @@ function printPaymentReport(){
         +'<td style="font-size:14px">'+esc(r.car)+'</td>'
         +'<td style="text-align:left;font-size:14px">'+fmtNum(r.amount)+'</td>'
         +'<td style="text-align:left;font-size:14px">'+fmtNum(r.balance)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.runningTotal)+'</td>'
+        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.total)+'</td>'
         +'</tr>';
     }).join('');
 
@@ -3958,10 +3955,10 @@ function printPaymentReport(){
       +'<th style="width:14%">ยี่ห้อ/รุ่น</th>'
       +'<th style="width:12%;text-align:left">ยอดชำระ(บาท)</th>'
       +'<th style="width:12%;text-align:left">คงเหลือ(บาท)</th>'
-      +'<th style="width:12%;text-align:left">ยอดรวมสะสม(บาท)</th>'
+      +'<th style="width:12%;text-align:left">ยอดรวม(ยอดที่ต้องชำระทั้งหมด)</th>'
       +'</tr></thead><tbody>'+trs+'</tbody>'
       +'<tfoot><tr><td colspan="6" style="text-align:right;font-weight:600;padding:6px 8px;border-top:2px solid #1a4f8a">รวมยอดชำระทั้งหมด</td>'
-      +'<td style="text-align:right;font-weight:700;color:#1a4f8a;padding:6px 8px;border-top:2px solid #1a4f8a">'+fmtNum(totalPaid)+'</td>'
+      +'<td style="text-align:left;font-weight:700;color:#1a4f8a;padding:6px 8px;border-top:2px solid #1a4f8a">'+fmtNum(totalPaid)+'</td>'
       +'<td style="border-top:2px solid #1a4f8a"></td><td style="border-top:2px solid #1a4f8a"></td>'
       +'</tr></tfoot>'
       +'</table>'
