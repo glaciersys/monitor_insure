@@ -3890,7 +3890,7 @@ function printPaymentReport(){
           rows.push({
             date:row.date,installNo:idx+1,custName:p.custName||'-',
             plate:p.plate||'-',car:p.car||'-',amount:row.amount,
-            balance:p.balance||0,total:p.totalAmount||0
+            balance:p.balance||0
           });
         }
       });
@@ -3901,19 +3901,28 @@ function printPaymentReport(){
       toast('ไม่พบข้อมูลการรับชำระในช่วงวันที่ที่เลือก','error');
       return;
     }
+    // วันที่ซ้ำกับแถวก่อนหน้า ให้แสดงวันที่แค่แถวแรกของกลุ่มนั้น แถวถัดไปเว้นว่างไว้ (ลดความรกของตาราง)
+    // และคำนวณ "ยอดรวม" เป็นยอดสะสม (running total) ของยอดชำระ ไล่ตามลำดับวันที่ แทนยอดรวมกรมธรรม์ที่ซ้ำกันทุกแถว
+    var prevDate=null,running=0;
+    rows.forEach(function(r){
+      r.showDate=(r.date!==prevDate);
+      prevDate=r.date;
+      running+=Number(r.amount||0);
+      r.runningTotal=running;
+    });
     st.textContent='พบ '+rows.length+' รายการ กำลังเปิดหน้าพิมพ์...';
 
     var trs=rows.map(function(r,i){
       return '<tr>'
         +'<td style="text-align:center;color:#94a3b8;font-size:12px">'+(i+1)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtDate(r.date)+'</td>'
+        +'<td style="text-align:left;font-size:14px">'+(r.showDate?fmtDate(r.date):'')+'</td>'
         +'<td style="text-align:center;font-size:14px">'+r.installNo+'</td>'
         +'<td>'+esc(r.custName)+'</td>'
         +'<td style="font-size:14px">'+esc(r.plate)+'</td>'
         +'<td style="font-size:14px">'+esc(r.car)+'</td>'
         +'<td style="text-align:left;font-size:14px">'+fmtNum(r.amount)+'</td>'
         +'<td style="text-align:left;font-size:14px">'+fmtNum(r.balance)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.total)+'</td>'
+        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.runningTotal)+'</td>'
         +'</tr>';
     }).join('');
 
@@ -3949,7 +3958,7 @@ function printPaymentReport(){
       +'<th style="width:14%">ยี่ห้อ/รุ่น</th>'
       +'<th style="width:12%;text-align:left">ยอดชำระ(บาท)</th>'
       +'<th style="width:12%;text-align:left">คงเหลือ(บาท)</th>'
-      +'<th style="width:12%;text-align:left">ยอดรวม(บาท)</th>'
+      +'<th style="width:12%;text-align:left">ยอดรวมสะสม(บาท)</th>'
       +'</tr></thead><tbody>'+trs+'</tbody>'
       +'<tfoot><tr><td colspan="6" style="text-align:right;font-weight:600;padding:6px 8px;border-top:2px solid #1a4f8a">รวมยอดชำระทั้งหมด</td>'
       +'<td style="text-align:right;font-weight:700;color:#1a4f8a;padding:6px 8px;border-top:2px solid #1a4f8a">'+fmtNum(totalPaid)+'</td>'
