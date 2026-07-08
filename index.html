@@ -3819,8 +3819,8 @@ function printExpireReport(){
       +'<td style="font-size:14px">'+esc((c.brand||'')+(c.model?' '+c.model:''))+'</td>'
       +'<td style="text-align:center;font-size:14px">'+esc(c.caryear||'-')+'</td>'
       +'<td style="text-align:left;font-size:14px">'+esc(c.type||'-')+'</td>'
-      +'<td style="text-align:left;font-size:14px">'+fmtNum(c.premium)+'</td>'
-      +'<td style="text-align:left;font-size:14px">'+fmtNumRpt(c.coverage)+'</td>'
+      +'<td style="text-align:right;font-size:14px">'+fmtNum(c.premium)+'</td>'
+      +'<td style="text-align:right;font-size:14px">'+fmtNumRpt(c.coverage)+'</td>'
       +'</tr>';
   });
 
@@ -3855,8 +3855,8 @@ function printExpireReport(){
     +'<th style="width:12%">ยี่ห้อ/รุ่น</th>'
     +'<th style="width:7%;text-align:center">ปี ค.ศ.</th>'
     +'<th style="width:7%;text-align:left">ประเภท</th>'
-    +'<th style="width:10%;text-align:left">เบี้ย(บาท)</th>'
-    +'<th style="width:12%;text-align:left">ทุนประกัน(บาท)</th>'
+    +'<th style="width:10%;text-align:right">เบี้ย(บาท)</th>'
+    +'<th style="width:12%;text-align:right">ทุนประกัน(บาท)</th>'
     +'</tr></thead><tbody>'+rows+'</tbody>'
     +'<tfoot><tr><td colspan="8" style="text-align:right;font-weight:600;padding:6px 8px;border-top:2px solid #1a4f8a">รวมเบี้ยทั้งหมด</td>'
     +'<td style="text-align:right;font-weight:700;color:#1a4f8a;padding:6px 8px;border-top:2px solid #1a4f8a">'+fmtNum(list.reduce(function(s,c){return s+Number(c.premium||0);},0))+'</td>'
@@ -3917,9 +3917,9 @@ function printPaymentReport(){
         +'<td>'+esc(r.custName)+'</td>'
         +'<td style="font-size:14px">'+esc(r.plate)+'</td>'
         +'<td style="font-size:14px">'+esc(r.car)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.amount)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.balance)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+fmtNum(r.total)+'</td>'
+        +'<td style="text-align:right;font-size:14px">'+fmtNum(r.amount)+'</td>'
+        +'<td style="text-align:right;font-size:14px">'+fmtNum(r.balance)+'</td>'
+        +'<td style="text-align:right;font-size:14px">'+fmtNum(r.total)+'</td>'
         +'</tr>';
     }).join('');
 
@@ -3953,12 +3953,12 @@ function printPaymentReport(){
       +'<th style="width:22%">ชื่อ</th>'
       +'<th style="width:10%">ทะเบียนรถ</th>'
       +'<th style="width:14%">ยี่ห้อ/รุ่น</th>'
-      +'<th style="width:12%;text-align:left">ยอดชำระ(บาท)</th>'
-      +'<th style="width:12%;text-align:left">คงเหลือ(บาท)</th>'
-      +'<th style="width:12%;text-align:left">ยอดรวม</th>'
+      +'<th style="width:12%;text-align:right">ยอดชำระ(บาท)</th>'
+      +'<th style="width:12%;text-align:right">คงเหลือ(บาท)</th>'
+      +'<th style="width:12%;text-align:right">ยอดรวม</th>'
       +'</tr></thead><tbody>'+trs+'</tbody>'
       +'<tfoot><tr><td colspan="6" style="text-align:right;font-weight:600;padding:6px 6px;border-top:2px solid #1a4f8a">รวม</td>'
-      +'<td style="text-align:left;font-weight:700;color:#1a4f8a;padding:6px 6px;border-top:2px solid #1a4f8a">'+fmtNum(totalPaid)+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:#1a4f8a;padding:6px 6px;border-top:2px solid #1a4f8a">'+fmtNum(totalPaid)+'</td>'
       +'<td style="border-top:2px solid #1a4f8a"></td><td style="border-top:2px solid #1a4f8a"></td>'
       +'</tr></tfoot>'
       +'</table>'
