@@ -3806,14 +3806,18 @@ function printExpireReport(){
   // สร้างหน้าพิมพ์ เรียงตามบริษัท แสดงชื่อบริษัทเป็น group header
   var rows='';
   var lastInsco='';
+  var lastEnd='';
   list.forEach(function(c,i){
     if(c.insco!==lastInsco){
       lastInsco=c.insco||'-';
+      lastEnd='';
       rows+='<tr class="insco-header"><td colspan="9">'+esc(lastInsco)+'</td></tr>';
     }
+    var endDisp=(c.end&&c.end===lastEnd)?'':fmtDate(c.end);
+    lastEnd=c.end||'';
     rows+='<tr>'
       +'<td style="text-align:center;color:#94a3b8;font-size:12px">'+(i+1)+'</td>'
-      +'<td style="text-align:left;font-size:14px">'+fmtDate(c.end)+'</td>'
+      +'<td style="text-align:left;font-size:14px">'+endDisp+'</td>'
       +'<td>'+esc(fullName(c))+'</td>'
       +'<td style="font-size:14px">'+esc(c.plate||'-')+'</td>'
       +'<td style="font-size:14px">'+esc((c.brand||'')+(c.model?' '+c.model:''))+'</td>'
