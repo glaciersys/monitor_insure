@@ -3269,6 +3269,8 @@ function payOpenDetail(id){
   });
   var otherLbl=document.getElementById('pay-other-label');
   if(otherLbl)otherLbl.value=p.otherLabel||'';
+  var noteEl=document.getElementById('pay-note');
+  if(noteEl)noteEl.value=p.note||'';
   // format ทันที
   ['pay-ins','pay-inspect','pay-gas','pay-tax','pay-discount','pay-other'].forEach(function(id){
     var el=document.getElementById(id);
