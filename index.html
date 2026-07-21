@@ -4001,6 +4001,18 @@ function renderDash(){
   var totalPr=all.filter(function(c){return c.status!=='cancel';}).reduce(function(a,c){return a+Number(c.premium||0);},0);
   var totalCv=all.filter(function(c){return c.status!=='cancel';}).reduce(function(a,c){return a+Number(c.coverage||0);},0);
 
+  // เบี้ยประกันรวมแยกตามปี (ปีของวันที่เริ่มคุ้มครอง, พ.ศ.)
+  var prByYear={};
+  all.filter(function(c){return c.status!=='cancel';}).forEach(function(c){
+    if(!c.start)return;
+    var ceY=parseInt(String(c.start).substring(0,4));
+    if(!ceY)return;
+    var beY=ceY+543;
+    prByYear[beY]=(prByYear[beY]||0)+Number(c.premium||0);
+  });
+  var prYearKeys=Object.keys(prByYear).sort();
+  var maxPrYear=Math.max.apply(null,prYearKeys.map(function(y){return prByYear[y];}));if(!maxPrYear)maxPrYear=1;
+
   // group by insco
   var coMap={};
   all.forEach(function(c){
@@ -4100,6 +4112,11 @@ function renderDash(){
   // premium bars
   var prHtml=prBuckets.map(function(b,i){return barRow(b.label+'  บาท',b.count,maxPr,colors[(i+1)%colors.length]);}).join('');
 
+  // premium by year bars
+  var prYearHtml=prYearKeys.map(function(y,i){
+    return barRow('ปี '+(String(y).slice(-2)),prByYear[y],maxPrYear,colors[i%colors.length],fmtM(prByYear[y])+' บาท');
+  }).join('');
+
   // coverage bars
   var cvHtml=cvBuckets.map(function(b,i){return barRow(b.label+'  บาท',b.count,maxCv,colors[(i+3)%colors.length]);}).join('');
 
@@ -4159,6 +4176,7 @@ function renderDash(){
 
   document.getElementById('dash-body').innerHTML=
     kpi+
+    card('เบี้ยประกันรวม แยกตามปี (เริ่มคุ้มครอง)','📆',prYearHtml||'<div style="color:#94a3b8;font-size:11px">ยังไม่มีข้อมูล</div>')+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
       card('แยกตามบริษัทประกัน','🏢',coHtml||'<div style="color:#94a3b8;font-size:11px">ยังไม่มีข้อมูล</div>')+
       card('แยกตามประเภทประกัน','📋',tyHtml||'<div style="color:#94a3b8;font-size:11px">ยังไม่มีข้อมูล</div>')+
