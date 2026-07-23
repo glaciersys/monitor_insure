@@ -3835,16 +3835,21 @@ function printOverdueReport(){
     }
     st.textContent='พบ '+rows.length+' รายการ กำลังเปิดหน้าพิมพ์...';
 
+    var lastPayDisp='';
     var trs=rows.map(function(r,i){
+      var payDisp=r.lastDate?fmtDate(r.lastDate):'ยังไม่เคยชำระ';
+      var payDispShow=(payDisp===lastPayDisp)?'':payDisp;
+      lastPayDisp=payDisp;
+      var paidShow=(Number(r.paid)===0)?'':fmtNum(r.paid);
       return '<tr>'
         +'<td style="text-align:center;color:#94a3b8;font-size:12px">'+(i+1)+'</td>'
         +'<td>'+esc(r.custName)+'</td>'
         +'<td style="font-size:14px">'+esc(r.plate)+'</td>'
         +'<td style="font-size:14px">'+esc(r.car)+'</td>'
-        +'<td style="text-align:left;font-size:14px">'+(r.lastDate?fmtDate(r.lastDate):'ยังไม่เคยชำระ')+'</td>'
+        +'<td style="text-align:left;font-size:14px">'+payDispShow+'</td>'
         +'<td style="text-align:center;font-size:14px;color:#dc2626;font-weight:700">'+(r.neverPaid?'-':r.daysSince+' วัน')+'</td>'
         +'<td style="text-align:right;font-size:14px">'+fmtNum(r.total)+'</td>'
-        +'<td style="text-align:right;font-size:14px">'+fmtNum(r.paid)+'</td>'
+        +'<td style="text-align:right;font-size:14px">'+paidShow+'</td>'
         +'<td style="text-align:right;font-size:14px;color:#dc2626;font-weight:700">'+fmtNum(r.balance)+'</td>'
         +'</tr>';
     }).join('');
