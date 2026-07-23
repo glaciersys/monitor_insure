@@ -3822,8 +3822,10 @@ function printOverdueReport(){
     });
     // เรียงจากค้างนานสุดไปน้อยสุด (ยังไม่เคยชำระถือว่าค้างนานสุด อยู่บนสุด) ถ้าค้างเท่ากันเรียงชื่อตามตัวอักษร
     rows.sort(function(a,b){
-      var da=a.neverPaid?Infinity:a.daysSince, db_=b.neverPaid?Infinity:b.daysSince;
-      if(db_-da!==0)return db_-da;
+      if(a.neverPaid&&b.neverPaid)return (a.custName||'').localeCompare(b.custName||'','th');
+      if(a.neverPaid)return -1;
+      if(b.neverPaid)return 1;
+      if(b.daysSince-a.daysSince!==0)return b.daysSince-a.daysSince;
       return (a.custName||'').localeCompare(b.custName||'','th');
     });
     if(!rows.length){
